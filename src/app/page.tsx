@@ -1,0 +1,536 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import { useYarnStore, useInspirationStore } from "@/lib/store";
+import { texts } from "@/lib/texts";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+
+interface Bubble {
+  id: string;
+  type: "yarn" | "inspiration";
+  label: string;
+  color: string;
+  image: string | null;
+  href: string;
+  baseX: number;
+  baseY: number;
+  r: number;
+  floatPhase: number;
+  floatSpeed: number;
+  amp: number;
+}
+
+const GAP = 6;
+const AMP = 6;
+const RETURN_DELAY = 3000;
+const RETURN_SPEED = 0.04;
+const TITLE_Y = 40;
+const MIN_FONT = 8;
+const MAX_R = 48;
+const MIN_R = 12;
+const HEADER_H = 56;
+const TITLE_H = 60;
+const BTN_H = 56;
+
+function packSide(
+  items: Array<{ id: string; type: "yarn" | "inspiration"; label: string; color: string; image: string | null; href: string }>,
+  sideOffset: number,
+  sideWidth: number,
+  r: number
+): Bubble[] {
+  const d = r * 2 + GAP;
+  if (items.length === 0) return [];
+  const result: Bubble[] = [];
+  const startX = sideOffset + sideWidth / 2;
+  for (let i = 0; i < items.length; i++) {
+    const row = Math.floor(i / 1);
+    result.push({
+      ...items[i],
+      baseX: startX,
+      baseY: TITLE_Y + 16 + row * d + r,
+      r,
+      floatPhase: Math.random() * Math.PI * 2,
+      floatSpeed: 0.5 + Math.random() * 0.6,
+      amp: AMP * (0.7 + Math.random() * 0.6),
+    });
+  }
+  for (let iter = 0; iter < 30; iter++) {
+    for (let i = 0; i < result.length; i++) {
+      for (let j = i + 1; j < result.length; j++) {
+        const a = result[i];
+        const b = result[j];
+        const dx = b.baseX - a.baseX;
+        const dy = b.baseY - a.baseY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const minDist = a.r + b.r + GAP;
+        if (dist < minDist && dist > 0.01) {
+          const overlap = (minDist - dist) / 2;
+          const nx = dx / dist;
+          const ny = dy / dist;
+          a.baseX -= nx * overlap * 0.4;
+          a.baseY -= ny * overlap * 0.4;
+          b.baseX += nx * overlap * 0.4;
+          b.baseY += ny * overlap * 0.4;
+        }
+      }
+      result[i].baseX = Math.max(sideOffset + r, Math.min(sideOffset + sideWidth - r, result[i].baseX));
+      result[i].baseY = Math.max(TITLE_Y + 16 + r, result[i].baseY);
+    }
+  }
+  return result;
+}
+
+export default function Home() {
+  const router = useRouter();
+  const { yarns, fetchYarns } = useYarnStore();
+  const { inspirations, fetchInspirations } = useInspirationStore();
+  const [winSize, setWinSize] = useState({ w: 600, h: 600 });
+  const [time, setTime] = useState(0);
+  const dragOffsets = useRef<Map<string, { ox: number; oy: number; returnTime: number | null }>>(new Map());
+  const [tick, setTick] = useState(0);
+  const wasDragging = useRef(false);
+  const navigated = useRef(false);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [scale, setScale] = useState(1);
+  const panStart = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const pinchRef = useRef<{ dist0: number; scale0: number } | null>(null);
+  const animRef = useRef<number>(0);
+
+  useEffect(() => {
+    const onResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
+    onResize();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    fetchYarns();
+    fetchInspirations();
+  }, [fetchYarns, fetchInspirations]);
+
+  useEffect(() => {
+    let running = true;
+    const tick = () => {
+      if (!running) return;
+      setTime((t) => t + 0.016);
+      animRef.current = requestAnimationFrame(tick);
+    };
+    animRef.current = requestAnimationFrame(tick);
+    return () => { running = false; cancelAnimationFrame(animRef.current); };
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      let changed = false;
+      const now = Date.now();
+      dragOffsets.current.forEach((o) => {
+        if (o.returnTime === null) return;
+        if (now < o.returnTime) return;
+        const dist = Math.sqrt(o.ox * o.ox + o.oy * o.oy);
+        if (dist < 0.5) {
+          o.ox = 0; o.oy = 0; o.returnTime = null;
+        } else {
+          const step = Math.max(1, dist * RETURN_SPEED);
+          const f = step / dist;
+          o.ox -= o.ox * f;
+          o.oy -= o.oy * f;
+        }
+        changed = true;
+      });
+      if (changed) setTick((t) => t + 1);
+    }, 16);
+    return () => clearInterval(interval);
+  }, []);
+
+  const linkedInspirations = useMemo(() => inspirations.filter((i) => i.yarn_id !== null), [inspirations]);
+  const linkedYarnIds = useMemo(() => new Set(linkedInspirations.map((i) => i.yarn_id)), [linkedInspirations]);
+  const linkedYarns = useMemo(() => yarns.filter((y) => linkedYarnIds.has(y.id)), [yarns, linkedYarnIds]);
+
+  const links = useMemo(() => {
+    return linkedInspirations.filter((i) => i.yarn_id !== null).map((i) => ({ yarnId: i.yarn_id!, inspId: i.id }));
+  }, [linkedInspirations]);
+
+  const isLargeBase64 = (s: string | null | undefined): boolean => {
+    if (!s) return true;
+    if (s.startsWith("data:") && s.length > 5000) return true;
+    return false;
+  };
+
+  const yarnItems = useMemo(() => linkedYarns.map((y) => ({
+    id: `y-${y.id}`, type: "yarn" as const, label: y.name,
+    color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarns/${y.id}`,
+  })), [linkedYarns]);
+
+  const inspItems = useMemo(() => linkedInspirations.map((i) => ({
+    id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
+    color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null, href: `/inspirations/${i.id}`,
+  })), [linkedInspirations]);
+
+  const totalItems = yarnItems.length + inspItems.length;
+
+  const availW = winSize.w;
+  const availH = winSize.h - HEADER_H - TITLE_H - BTN_H - 16;
+
+  const canvasWidth = availW;
+  const canvasHeight = Math.max(availH, 200);
+  const leftHalf = canvasWidth / 2;
+
+  const r = useMemo(() => {
+    const base = Math.max(canvasWidth, canvasHeight);
+    let rr = Math.round(base * 0.055);
+    rr = Math.max(MIN_R, Math.min(MAX_R, rr));
+    if (totalItems > 10) rr = Math.max(MIN_R, Math.round(rr * 10 / totalItems));
+    return rr;
+  }, [canvasWidth, canvasHeight, totalItems]);
+
+  const allBubbles = useMemo(() => {
+    if (yarnItems.length === 0 && inspItems.length === 0) return [];
+    const yarnBubbles = packSide(yarnItems, 0, leftHalf, r);
+    const inspBubbles = packSide(inspItems, leftHalf, leftHalf, r);
+    const all = [...yarnBubbles, ...inspBubbles];
+    for (let iter = 0; iter < 20; iter++) {
+      for (let i = 0; i < all.length; i++) {
+        for (let j = i + 1; j < all.length; j++) {
+          const a = all[i];
+          const b = all[j];
+          if (a.baseX <= leftHalf && b.baseX >= leftHalf) continue;
+          if (b.baseX <= leftHalf && a.baseX >= leftHalf) continue;
+          const dx = b.baseX - a.baseX;
+          const dy = b.baseY - a.baseY;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const minDist = a.r + b.r + GAP;
+          if (dist < minDist && dist > 0.01) {
+            const overlap = (minDist - dist) / 2;
+            const nx = dx / dist;
+            const ny = dy / dist;
+            a.baseX -= nx * overlap * 0.4;
+            a.baseY -= ny * overlap * 0.4;
+            b.baseX += nx * overlap * 0.4;
+            b.baseY += ny * overlap * 0.4;
+          }
+        }
+        const side = all[i].baseX <= leftHalf ? 0 : leftHalf;
+        all[i].baseX = Math.max(side + r, Math.min(side + leftHalf - r, all[i].baseX));
+        all[i].baseY = Math.max(TITLE_Y + 16 + r, all[i].baseY);
+      }
+    }
+    return all;
+  }, [yarnItems, inspItems, leftHalf, r]);
+
+  const svgHeight = useMemo(() => {
+    if (allBubbles.length === 0) return canvasHeight;
+    const maxY = Math.max(...allBubbles.map((b) => b.baseY + b.r + AMP));
+    return Math.max(canvasHeight, maxY + 40);
+  }, [allBubbles, canvasHeight]);
+
+  const bubbles = useMemo((): Bubble[] => {
+    return allBubbles.map((b) => {
+      const o = dragOffsets.current.get(b.id) || { ox: 0, oy: 0, returnTime: null };
+      const floatY = Math.sin(time * b.floatSpeed + b.floatPhase) * b.amp;
+      const x = Math.max(b.r, Math.min(canvasWidth - b.r, b.baseX + o.ox));
+      const y = Math.max(TITLE_Y + 16 + b.r, Math.min(svgHeight - b.r, b.baseY + o.oy + floatY));
+      return { ...b, baseX: x, baseY: y };
+    });
+  }, [allBubbles, time, tick, canvasWidth, svgHeight]);
+
+  const bubblesMap = useMemo(() => {
+    const map = new Map<string, Bubble>();
+    for (const b of bubbles) { map.set(b.id, b); }
+    return map;
+  }, [bubbles]);
+
+  const linkLines = useMemo(() => {
+    const lines: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    for (const l of links) {
+      const yB = bubblesMap.get(`y-${l.yarnId}`);
+      const iB = bubblesMap.get(`i-${l.inspId}`);
+      if (yB && iB) lines.push({ x1: yB.baseX, y1: yB.baseY, x2: iB.baseX, y2: iB.baseY });
+    }
+    return lines;
+  }, [links, bubblesMap]);
+
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const draggingRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => setMousePos({ x: e.clientX, y: e.clientY }), []);
+
+  const hoveredBubble = hoveredId ? bubblesMap.get(hoveredId) : null;
+  const textFontSize = Math.max(8, Math.round(r * 0.24));
+  const showBubbleText = r >= MIN_FONT && textFontSize >= MIN_FONT;
+
+  const pushOthers = useCallback((dragId: string, dx: number, dy: number) => {
+    const dragBubble = allBubbles.find((b) => b.id === dragId);
+    if (!dragBubble) return;
+    const newX = dragBubble.baseX + dx;
+    const newY = dragBubble.baseY + dy;
+    const minDist = dragBubble.r * 2 + GAP;
+    for (const b of allBubbles) {
+      if (b.id === dragId) continue;
+      const o = dragOffsets.current.get(b.id) || { ox: 0, oy: 0, returnTime: null };
+      let bx = b.baseX + o.ox;
+      let by = b.baseY + o.oy;
+      const dist = Math.sqrt((bx - newX) ** 2 + (by - newY) ** 2);
+      if (dist < minDist && dist > 0.01) {
+        const overlap = (minDist - dist) * 0.5;
+        const nx = (bx - newX) / dist;
+        const ny = (by - newY) / dist;
+        bx += nx * overlap;
+        by += ny * overlap;
+        o.ox = Math.max(-b.baseX + b.r, Math.min(canvasWidth - b.r - b.baseX, bx - b.baseX));
+        o.oy = Math.max(-b.baseY + TITLE_Y + 16 + b.r, Math.min(svgHeight - b.r - b.baseY, by - b.baseY));
+        o.returnTime = null;
+        dragOffsets.current.set(b.id, o);
+      }
+    }
+  }, [allBubbles, canvasWidth, svgHeight]);
+
+  const onBubblePointerDown = useCallback((e: React.PointerEvent, bubbleId: string) => {
+    if (e.button !== 0) return;
+    e.stopPropagation();
+    e.preventDefault();
+    wasDragging.current = false;
+    navigated.current = false;
+    const b = allBubbles.find((x) => x.id === bubbleId);
+    if (!b) return;
+    const svg = e.currentTarget.closest("svg");
+    if (!svg) return;
+    const o = dragOffsets.current.get(b.id) || { ox: 0, oy: 0, returnTime: null };
+    o.returnTime = null;
+    dragOffsets.current.set(b.id, o);
+    draggingRef.current = { id: b.id, startX: e.clientX, startY: e.clientY, origX: o.ox, origY: o.oy };
+    svg.setPointerCapture(e.pointerId);
+  }, [allBubbles]);
+
+  const onPointerMove = useCallback((e: React.PointerEvent) => {
+    const drag = draggingRef.current;
+    if (drag) {
+      const dx = (e.clientX - drag.startX) / scale;
+      const dy = (e.clientY - drag.startY) / scale;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wasDragging.current = true;
+      let ndx = dx + drag.origX;
+      let ndy = dy + drag.origY;
+      const b = allBubbles.find((x) => x.id === drag.id);
+      if (b) {
+        ndx = Math.max(-b.baseX + b.r, Math.min(canvasWidth - b.r - b.baseX, ndx));
+        ndy = Math.max(-b.baseY + TITLE_Y + 16 + b.r, Math.min(svgHeight - b.r - b.baseY, ndy));
+      }
+      dragOffsets.current.set(drag.id, { ox: ndx, oy: ndy, returnTime: null });
+      pushOthers(drag.id, ndx, ndy);
+      setTick((t) => t + 1);
+      return;
+    }
+    const ps = panStart.current;
+    if (ps) {
+      const dx = e.clientX - ps.x;
+      const dy = e.clientY - ps.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) wasDragging.current = true;
+      setPan({ x: ps.px + dx, y: ps.py + dy });
+    }
+  }, [pushOthers, allBubbles, canvasWidth, svgHeight, scale]);
+
+  const onPointerUp = useCallback((e: React.PointerEvent) => {
+    const drag = draggingRef.current;
+    if (drag) {
+      const svg = e.currentTarget;
+      svg.releasePointerCapture(e.pointerId);
+      const o = dragOffsets.current.get(drag.id);
+      if (o && (o.ox !== 0 || o.oy !== 0)) {
+        o.returnTime = Date.now() + RETURN_DELAY;
+        dragOffsets.current.set(drag.id, o);
+      }
+      if (!wasDragging.current && !navigated.current) {
+        const b = allBubbles.find((x) => x.id === drag.id);
+        if (b) {
+          navigated.current = true;
+          router.push(b.href);
+        }
+      }
+      draggingRef.current = null;
+      return;
+    }
+    panStart.current = null;
+  }, [router, allBubbles]);
+
+  const handleClickNav = useCallback((href: string) => {
+    if (!wasDragging.current && !navigated.current) {
+      navigated.current = true;
+      router.push(href);
+    }
+  }, [router]);
+
+  const onSvgPointerDown = useCallback((e: React.PointerEvent) => {
+    if (e.button !== 0) return;
+    if (e.target !== e.currentTarget && (e.target as Element).closest("g")) return;
+    wasDragging.current = false;
+    panStart.current = { x: e.clientX, y: e.clientY, px: pan.x, py: pan.y };
+  }, [pan]);
+
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    setScale((s) => Math.max(0.3, Math.min(3, s * (e.deltaY > 0 ? 0.9 : 1.1))));
+  }, []);
+
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      pinchRef.current = { dist0: Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY), scale0: scale };
+    }
+  }, [scale]);
+
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchRef.current) {
+      e.preventDefault();
+      const dist = Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
+      setScale(Math.max(0.3, Math.min(3, pinchRef.current.scale0 * (dist / pinchRef.current.dist0))));
+    }
+  }, []);
+
+  const onTouchEnd = useCallback(() => { pinchRef.current = null; }, []);
+
+  return (
+    <div className="flex flex-col" style={{ height: "100vh" }}>
+      {/* title bar */}
+      <section className="text-center shrink-0 px-2 pt-2 pb-0">
+        <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 leading-tight">
+          {texts.homeHeading}
+        </h1>
+        <p className="text-gray-500 text-xs leading-relaxed">
+          {linkedYarns.length} 种关联毛线 · {linkedInspirations.length} 个关联灵感
+        </p>
+      </section>
+
+      {/* full-viewport bubble area */}
+      <div className="flex-1 relative overflow-hidden" onWheel={onWheel}
+        onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
+        {bubbles.length > 0 && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <svg
+              width={canvasWidth}
+              height={svgHeight}
+              className="block overflow-visible"
+              style={{
+                touchAction: "none",
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+                transformOrigin: "center center",
+              }}
+              onMouseMove={onMouseMove}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerDown={onSvgPointerDown}
+            >
+              <defs>
+                <filter id="ss" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx={0} dy={4} stdDeviation={8} floodColor="rgba(0,0,0,0.15)" />
+                </filter>
+                <filter id="gg" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx={0} dy={2} stdDeviation={4} floodColor="rgba(255,255,255,0.3)" />
+                </filter>
+                <radialGradient id="sh" cx="35%" cy="30%" r="55%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
+                  <stop offset="60%" stopColor="rgba(255,255,255,0.08)" />
+                  <stop offset="100%" stopColor="rgba(0,0,0,0.06)" />
+                </radialGradient>
+                <radialGradient id="rsh" cx="35%" cy="30%" r="55%">
+                  <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
+                  <stop offset="60%" stopColor="rgba(255,255,255,0.06)" />
+                  <stop offset="100%" stopColor="rgba(0,0,0,0.04)" />
+                </radialGradient>
+                <linearGradient id="gr" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#e879f9" />
+                  <stop offset="100%" stopColor="#f472b6" />
+                </linearGradient>
+              </defs>
+
+              <text x={canvasWidth * 0.15} y={TITLE_Y} textAnchor="middle" fill="#a855f7" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeYarnColumn}</text>
+              <text x={canvasWidth * 0.85} y={TITLE_Y} textAnchor="middle" fill="#ec4899" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeInspColumn}</text>
+              <line x1={canvasWidth / 2} y1={0} x2={canvasWidth / 2} y2={svgHeight} stroke="#e5e7eb" strokeWidth={1} strokeDasharray="6 4" />
+
+              {linkLines.map((line, idx) => (
+                <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#c084fc" strokeWidth={2} strokeOpacity={0.5} strokeDasharray="4 3" />
+              ))}
+
+              {bubbles.map((b) => (
+                <g
+                  key={b.id}
+                  className="cursor-pointer"
+                  style={{ opacity: hoveredId && hoveredId !== b.id ? 0.35 : 1 }}
+                  onMouseEnter={() => setHoveredId(b.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                  onClick={() => handleClickNav(b.href)}
+                  onPointerDown={(e) => onBubblePointerDown(e, b.id)}
+                >
+                  {b.type === "yarn" ? (
+                    <>
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color} fillOpacity={0.7} stroke="rgba(255,255,255,0.7)" strokeWidth={2.5} filter="url(#ss)" />
+                      {hoveredId === b.id && b.image ? (
+                        <>
+                          <clipPath id={`cy-${b.id}`}><circle cx={b.baseX} cy={b.baseY} r={b.r} /></clipPath>
+                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} />
+                        </>
+                      ) : showBubbleText ? (
+                        <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.4)} textAnchor="middle" fill="white" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+                          {b.label.length > 8 ? b.label.slice(0, 7) + "…" : b.label}
+                        </text>
+                      ) : null}
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="url(#sh)" filter="url(#gg)" />
+                    </>
+                  ) : (
+                    <>
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(4, Math.round(r * 0.3))} fill="url(#gr)" stroke="rgba(255,255,255,0.7)" strokeWidth={2.5} filter="url(#ss)" />
+                      {hoveredId === b.id && b.image ? (
+                        <>
+                          <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(4, Math.round(r * 0.3))} /></clipPath>
+                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} />
+                        </>
+                      ) : showBubbleText ? (
+                        <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.4)} textAnchor="middle" fill="white" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+                          {b.label.length > 8 ? b.label.slice(0, 7) + "…" : b.label}
+                        </text>
+                      ) : null}
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(4, Math.round(r * 0.3))} fill="url(#rsh)" filter="url(#gg)" />
+                    </>
+                  )}
+                </g>
+              ))}
+            </svg>
+          </div>
+        )}
+
+        {hoveredBubble && (
+          <div className="fixed z-50 bg-white/95 backdrop-blur rounded-xl shadow-xl border border-gray-100 px-3 py-2 pointer-events-none" style={{
+            left: Math.min(mousePos.x + 14, window.innerWidth - 160),
+            top: Math.max(mousePos.y - 50, 8),
+          }}>
+            {hoveredBubble.image && (
+              <img src={hoveredBubble.image} alt={hoveredBubble.label} className="w-full h-20 object-cover rounded-lg mb-1.5" />
+            )}
+            <div className="flex items-center gap-1.5">
+              {hoveredBubble.type === "yarn" ? (
+                <span className="inline-block w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: hoveredBubble.color }} />
+              ) : (
+                <span className="text-sm">💡</span>
+              )}
+              <span className="text-sm font-medium text-gray-800 truncate">{hoveredBubble.label}</span>
+            </div>
+            <div className="text-[10px] text-gray-400 mt-0.5">
+              {hoveredBubble.type === "yarn" ? texts.homeYarnTooltip : texts.homeInspTooltip}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* action buttons */}
+      <section className="text-center shrink-0 pb-2 pt-0">
+        <div className="flex justify-center gap-3">
+          <Link href="/yarns" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition">
+            {texts.homeManageYarns}
+          </Link>
+          <Link href="/inspirations" className="px-5 py-2.5 rounded-xl bg-white text-purple-600 font-semibold text-sm border border-purple-200 shadow hover:shadow-lg transition">
+            {texts.homeBrowseInspirations}
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
