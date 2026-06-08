@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { useInspirationStore, useYarnStore } from "@/lib/store";
+import { cleanUrl, scrapeUrl } from "@/lib/scrape";
 
 interface Props {
   onClose: () => void;
@@ -39,37 +40,20 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const handlePatternUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type === "application/pdf" || file.name.endsWith(".pdf")) {
-      setPatternUploading(true);
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      setPattern(data.url);
+    setPatternUploading(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setPattern(reader.result as string);
       setPatternUploading(false);
-    } else {
-      setPatternUploading(true);
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPattern(reader.result as string);
-        setPatternUploading(false);
-      };
-      reader.readAsDataURL(file);
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const doScrape = async (value: string) => {
     setScraping(true);
     setScrapeError("");
     try {
-      const res = await fetch("/api/scrape", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: value }),
-        cache: "no-cache",
-      });
-      if (!res.ok) throw new Error("scrape failed");
-      const data = await res.json();
+      const data = await scrapeUrl(value);
       if (data.title) setTitle(data.title);
       if (data.platform) setPlatform(data.platform);
       if (data.images?.length > 0) setImage(data.images[0]);
@@ -81,11 +65,12 @@ export default function InspirationForm({ onClose, initial }: Props) {
   };
 
   const handleUrlChange = (value: string) => {
-    setUrl(value);
-    if (!value.startsWith("http")) return;
+    const cleaned = cleanUrl(value);
+    setUrl(cleaned);
+    if (!cleaned.startsWith("http")) return;
     if (initial && initial.image) return;
     if (scrapeTimer.current) clearTimeout(scrapeTimer.current);
-    scrapeTimer.current = setTimeout(() => doScrape(value), 800);
+    scrapeTimer.current = setTimeout(() => doScrape(cleaned), 800);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
