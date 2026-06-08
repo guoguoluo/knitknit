@@ -10,3 +10,6 @@ public/uploads/
 
 # Local Netlify folder
 .netlify
+
+# Static export output
+out/
