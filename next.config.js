@@ -1,8 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
-  experimental: {
-    serverComponentsExternalPackages: ["electron"],
+  output: "export",
+  basePath: "/knitknit",
+  images: {
+    unoptimized: true,
   },
 };
 module.exports = nextConfig;

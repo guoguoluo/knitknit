@@ -68,6 +68,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
         body: JSON.stringify({ url: value }),
         cache: "no-cache",
       });
+      if (!res.ok) throw new Error("scrape failed");
       const data = await res.json();
       if (data.title) setTitle(data.title);
       if (data.platform) setPlatform(data.platform);

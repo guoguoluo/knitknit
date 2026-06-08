@@ -5,3 +5,8 @@ public/uploads/
 .env
 .env.local
 *.tsbuildinfo
+
+.vercel
+
+# Local Netlify folder
+.netlify

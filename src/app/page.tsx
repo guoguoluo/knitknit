@@ -143,13 +143,12 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const linkedInspirations = useMemo(() => inspirations.filter((i) => i.yarn_id !== null), [inspirations]);
-  const linkedYarnIds = useMemo(() => new Set(linkedInspirations.map((i) => i.yarn_id)), [linkedInspirations]);
+  const linkedYarnIds = useMemo(() => new Set(inspirations.filter((i) => i.yarn_id !== null).map((i) => i.yarn_id)), [inspirations]);
   const linkedYarns = useMemo(() => yarns.filter((y) => linkedYarnIds.has(y.id)), [yarns, linkedYarnIds]);
 
   const links = useMemo(() => {
-    return linkedInspirations.filter((i) => i.yarn_id !== null).map((i) => ({ yarnId: i.yarn_id!, inspId: i.id }));
-  }, [linkedInspirations]);
+    return inspirations.filter((i) => i.yarn_id !== null).map((i) => ({ yarnId: i.yarn_id!, inspId: i.id }));
+  }, [inspirations]);
 
   const isLargeBase64 = (s: string | null | undefined): boolean => {
     if (!s) return true;
@@ -162,10 +161,10 @@ export default function Home() {
     color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarns/${y.id}`,
   })), [linkedYarns]);
 
-  const inspItems = useMemo(() => linkedInspirations.map((i) => ({
+  const inspItems = useMemo(() => inspirations.map((i) => ({
     id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
     color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null, href: `/inspirations/${i.id}`,
-  })), [linkedInspirations]);
+  })), [inspirations]);
 
   const totalItems = yarnItems.length + inspItems.length;
 
@@ -396,14 +395,24 @@ export default function Home() {
           {texts.homeHeading}
         </h1>
         <p className="text-gray-500 text-xs leading-relaxed">
-          {linkedYarns.length} 种关联毛线 · {linkedInspirations.length} 个关联灵感
+          {linkedYarns.length} 种关联毛线 · {inspirations.length} 个灵感
         </p>
       </section>
 
       {/* full-viewport bubble area */}
       <div className="flex-1 relative overflow-hidden" onWheel={onWheel}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-        {bubbles.length > 0 && (
+
+        {inspirations.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center px-8">
+            <div className="text-6xl mb-4 opacity-70">🧶</div>
+            <h2 className="text-xl font-bold text-gray-700 mb-2">开始收集灵感吧</h2>
+            <p className="text-sm text-gray-400 mb-6 max-w-xs">去小红书、Ravelry 发现好看的毛衣和图解，添加到这里</p>
+            <Link href="/inspirations" className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition">
+              + 添加灵感
+            </Link>
+          </div>
+        ) : bubbles.length > 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             <svg
               width={canvasWidth}

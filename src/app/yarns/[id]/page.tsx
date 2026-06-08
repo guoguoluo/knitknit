@@ -33,7 +33,7 @@ export default function YarnDetail() {
   return (
     <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-3xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="text-sm text-purple-600 hover:text-purple-800">&larr; {texts.yarnBack}</button>
+      <button onClick={() => router.back()} className="text-sm text-purple-600 hover:text-purple-800">{texts.yarnBack}</button>
 
       <div className="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">

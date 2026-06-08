@@ -12,7 +12,7 @@ interface YarnStore {
   deleteYarn: (id: number) => Promise<void>;
 }
 
-export const useYarnStore = create<YarnStore>((set, get) => ({
+export const useYarnStore = create<YarnStore>((set) => ({
   yarns: [],
   loading: false,
   fetchYarns: async () => {
@@ -22,17 +22,17 @@ export const useYarnStore = create<YarnStore>((set, get) => ({
   },
   createYarn: async (input) => {
     const yarn = local.createYarn(input);
-    set({ yarns: [yarn, ...get().yarns] });
+    set({ yarns: local.getAllYarns() });
     return yarn;
   },
   updateYarn: async (id, input) => {
     const yarn = local.updateYarn(id, input);
-    if (yarn) set({ yarns: get().yarns.map(y => y.id === id ? yarn : y) });
+    if (yarn) set({ yarns: local.getAllYarns() });
     return yarn;
   },
   deleteYarn: async (id) => {
     local.deleteYarn(id);
-    set({ yarns: get().yarns.filter(y => y.id !== id) });
+    set({ yarns: local.getAllYarns() });
   },
 }));
 
@@ -45,7 +45,7 @@ interface InspirationStore {
   deleteInspiration: (id: number) => Promise<void>;
 }
 
-export const useInspirationStore = create<InspirationStore>((set, get) => ({
+export const useInspirationStore = create<InspirationStore>((set) => ({
   inspirations: [],
   loading: false,
   fetchInspirations: async () => {
@@ -55,17 +55,17 @@ export const useInspirationStore = create<InspirationStore>((set, get) => ({
   },
   createInspiration: async (input) => {
     const insp = local.createInspiration(input);
-    set({ inspirations: [insp, ...get().inspirations] });
+    set({ inspirations: local.getAllInspirations() });
     return insp;
   },
   updateInspiration: async (id, input) => {
     const insp = local.updateInspiration(id, input);
-    if (insp) set({ inspirations: get().inspirations.map(i => i.id === id ? insp : i) });
+    if (insp) set({ inspirations: local.getAllInspirations() });
     return insp;
   },
   deleteInspiration: async (id) => {
     local.deleteInspiration(id);
-    set({ inspirations: get().inspirations.filter(i => i.id !== id) });
+    set({ inspirations: local.getAllInspirations() });
   },
 }));
 
