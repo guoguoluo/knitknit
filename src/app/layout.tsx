@@ -30,8 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" sizes="192x192" href={`${basePath}/icons/icon-192x192.png`} />
         <link rel="apple-touch-icon" sizes="512x512" href={`${basePath}/icons/icon-512x512.png`} />
       </head>
-      <body className="bg-gradient-to-br from-purple-50 via-white to-pink-50 min-h-screen overflow-x-hidden">
-        <nav className="bg-white/70 backdrop-blur-lg border-b border-purple-100 sticky top-0 z-40 h-14 shrink-0">
+      <body className="bg-gradient-to-br from-purple-50 via-white to-pink-50 h-screen flex flex-col overflow-hidden">
+        <nav className="bg-white/70 backdrop-blur-lg border-b border-purple-100 shrink-0 z-40 h-14">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
             <Link href="/" className="font-bold text-lg bg-gradient-to-r from-purple-600 to-pink-500 bg-clip-text text-transparent">{texts.brand}</Link>
             <div className="flex items-center gap-2 sm:gap-6 text-sm">
@@ -41,7 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
           </div>
         </nav>
-        {children}
+        <main className="flex-1 min-h-0">{children}</main>
         <script dangerouslySetInnerHTML={{
           __html: `(async()=>{try{const reg=await navigator.serviceWorker.getRegistration();if(reg)await reg.unregister();await navigator.serviceWorker.register('${basePath}/sw.js')}catch(e){console.warn('SW注册失败',e)}})()`
         }} />

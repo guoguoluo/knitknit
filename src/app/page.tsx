@@ -146,6 +146,10 @@ export default function Home() {
   const linkedYarnIds = useMemo(() => new Set(inspirations.filter((i) => i.yarn_id !== null).map((i) => i.yarn_id)), [inspirations]);
   const linkedYarns = useMemo(() => yarns.filter((y) => linkedYarnIds.has(y.id)), [yarns, linkedYarnIds]);
 
+  const links = useMemo(() => {
+    return inspirations.filter((i) => i.yarn_id !== null).map((i) => ({ yarnId: i.yarn_id!, inspId: i.id }));
+  }, [inspirations]);
+
   const isLargeBase64 = (s: string | null | undefined): boolean => {
     if (!s) return true;
     if (s.startsWith("data:") && s.length > 5000) return true;
@@ -165,7 +169,7 @@ export default function Home() {
   const totalItems = yarnItems.length + inspItems.length;
 
   const availW = winSize.w;
-  const availH = winSize.h - HEADER_H - TITLE_H - BTN_H - 16;
+  const availH = winSize.h - HEADER_H - TITLE_H - BTN_H;
 
   const canvasWidth = availW;
   const canvasHeight = Math.max(availH, 200);
@@ -235,7 +239,15 @@ export default function Home() {
     return map;
   }, [bubbles]);
 
-
+  const linkLines = useMemo(() => {
+    const lines: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+    for (const l of links) {
+      const yB = bubblesMap.get(`y-${l.yarnId}`);
+      const iB = bubblesMap.get(`i-${l.inspId}`);
+      if (yB && iB) lines.push({ x1: yB.baseX, y1: yB.baseY, x2: iB.baseX, y2: iB.baseY });
+    }
+    return lines;
+  }, [links, bubblesMap]);
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -376,10 +388,10 @@ export default function Home() {
   const onTouchEnd = useCallback(() => { pinchRef.current = null; }, []);
 
   return (
-    <div className="flex flex-col" style={{ height: "100vh" }}>
+    <div className="h-full flex flex-col">
       {/* title bar */}
       <section className="text-center shrink-0 px-2 pt-2 pb-0">
-        <h1 className="text-2xl sm:text-4xl font-bold text-gray-800 leading-tight">
+        <h1 className="text-xl sm:text-3xl font-bold text-gray-800 leading-tight">
           {texts.homeHeading}
         </h1>
         <p className="text-gray-500 text-xs leading-relaxed">
@@ -388,7 +400,7 @@ export default function Home() {
       </section>
 
       {/* full-viewport bubble area */}
-      <div className="flex-1 relative overflow-hidden" onWheel={onWheel}
+      <div className="flex-1 min-h-0 relative overflow-hidden" onWheel={onWheel}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
 
         {inspirations.length === 0 ? (
@@ -441,6 +453,11 @@ export default function Home() {
 
               <text x={canvasWidth * 0.15} y={TITLE_Y} textAnchor="middle" fill="#a855f7" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeYarnColumn}</text>
               <text x={canvasWidth * 0.85} y={TITLE_Y} textAnchor="middle" fill="#ec4899" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeInspColumn}</text>
+
+              {linkLines.map((line, idx) => (
+                <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#c084fc" strokeWidth={2} strokeOpacity={0.5} strokeDasharray="4 3" />
+              ))}
+
               {bubbles.map((b) => (
                 <g
                   key={b.id}
@@ -512,7 +529,7 @@ export default function Home() {
       </div>
 
       {/* action buttons */}
-      <section className="text-center shrink-0 pb-2 pt-0">
+      <section className="text-center shrink-0 pb-4 pt-0">
         <div className="flex justify-center gap-3">
           <Link href="/yarns" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition">
             {texts.homeManageYarns}
