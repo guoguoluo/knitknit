@@ -146,10 +146,6 @@ export default function Home() {
   const linkedYarnIds = useMemo(() => new Set(inspirations.filter((i) => i.yarn_id !== null).map((i) => i.yarn_id)), [inspirations]);
   const linkedYarns = useMemo(() => yarns.filter((y) => linkedYarnIds.has(y.id)), [yarns, linkedYarnIds]);
 
-  const links = useMemo(() => {
-    return inspirations.filter((i) => i.yarn_id !== null).map((i) => ({ yarnId: i.yarn_id!, inspId: i.id }));
-  }, [inspirations]);
-
   const isLargeBase64 = (s: string | null | undefined): boolean => {
     if (!s) return true;
     if (s.startsWith("data:") && s.length > 5000) return true;
@@ -239,15 +235,7 @@ export default function Home() {
     return map;
   }, [bubbles]);
 
-  const linkLines = useMemo(() => {
-    const lines: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
-    for (const l of links) {
-      const yB = bubblesMap.get(`y-${l.yarnId}`);
-      const iB = bubblesMap.get(`i-${l.inspId}`);
-      if (yB && iB) lines.push({ x1: yB.baseX, y1: yB.baseY, x2: iB.baseX, y2: iB.baseY });
-    }
-    return lines;
-  }, [links, bubblesMap]);
+
 
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -453,12 +441,6 @@ export default function Home() {
 
               <text x={canvasWidth * 0.15} y={TITLE_Y} textAnchor="middle" fill="#a855f7" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeYarnColumn}</text>
               <text x={canvasWidth * 0.85} y={TITLE_Y} textAnchor="middle" fill="#ec4899" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeInspColumn}</text>
-              <line x1={canvasWidth / 2} y1={0} x2={canvasWidth / 2} y2={svgHeight} stroke="#e5e7eb" strokeWidth={1} strokeDasharray="6 4" />
-
-              {linkLines.map((line, idx) => (
-                <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#c084fc" strokeWidth={2} strokeOpacity={0.5} strokeDasharray="4 3" />
-              ))}
-
               {bubbles.map((b) => (
                 <g
                   key={b.id}
