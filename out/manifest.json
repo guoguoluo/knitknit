@@ -1,0 +1,26 @@
+{
+  "name": "YarnInspire",
+  "short_name": "YarnInspire",
+  "description": "管理你的毛线库存，收集编织灵感",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#9333EA",
+  "theme_color": "#9333EA",
+  "icons": [
+    {
+      "src": "/api/icon-svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/api/icon-svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["lifestyle", "shopping"],
+  "lang": "zh-CN",
+  "orientation": "portrait-primary"
+}

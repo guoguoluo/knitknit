@@ -57,7 +57,7 @@ export default function YarnsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map(yarn => (
-            <Link href={`/yarns/${yarn.id}`} key={yarn.id}>
+            <Link href={`/yarn-detail?id=${yarn.id}`} key={yarn.id}>
               <div className="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm hover:shadow-md transition cursor-pointer group">
                 {yarn.photo ? (
                   <img src={yarn.photo} alt={yarn.name} className="w-full h-40 object-cover rounded-xl mb-3" />

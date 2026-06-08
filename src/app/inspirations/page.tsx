@@ -69,7 +69,7 @@ export default function InspirationsPage() {
             };
             return (
               <div key={insp.id} className="bg-white rounded-2xl border border-purple-100 shadow-sm hover:shadow-md transition group">
-                <Link href={`/inspirations/${insp.id}`} className="block p-4">
+                <Link href={`/inspiration-detail?id=${insp.id}`} className="block p-4">
                   {insp.image ? (
                     <img src={insp.image} alt={insp.title} className="w-full h-40 object-cover rounded-xl mb-3" referrerPolicy="no-referrer" />
                   ) : (

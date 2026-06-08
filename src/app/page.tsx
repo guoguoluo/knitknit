@@ -158,12 +158,12 @@ export default function Home() {
 
   const yarnItems = useMemo(() => linkedYarns.map((y) => ({
     id: `y-${y.id}`, type: "yarn" as const, label: y.name,
-    color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarns/${y.id}`,
+    color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarn-detail?id=${y.id}`,
   })), [linkedYarns]);
 
   const inspItems = useMemo(() => inspirations.map((i) => ({
     id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
-    color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null, href: `/inspirations/${i.id}`,
+    color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null, href: `/inspiration-detail?id=${i.id}`,
   })), [inspirations]);
 
   const totalItems = yarnItems.length + inspItems.length;
