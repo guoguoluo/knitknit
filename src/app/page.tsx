@@ -33,29 +33,53 @@ const HEADER_H = 56;
 const TITLE_H = 60;
 const BTN_H = 56;
 
-function packSide(
-  items: Array<{ id: string; type: "yarn" | "inspiration"; label: string; color: string; image: string | null; href: string }>,
-  sideOffset: number,
-  sideWidth: number,
-  r: number
+function getBubbleRadius(
+  item: { type: string; hasYarn?: boolean },
+  baseR: number
+): number {
+  if (item.type === "yarn") return baseR;
+  if (item.hasYarn) return baseR;
+  return Math.max(MIN_R, Math.round(baseR * 0.6));
+}
+
+function scatterBubbles(
+  items: Array<{ id: string; type: "yarn" | "inspiration"; label: string; color: string; image: string | null; href: string; hasYarn?: boolean }>,
+  canvasW: number,
+  availH: number,
+  baseR: number
 ): Bubble[] {
-  const d = r * 2 + GAP;
   if (items.length === 0) return [];
   const result: Bubble[] = [];
-  const startX = sideOffset + sideWidth / 2;
-  for (let i = 0; i < items.length; i++) {
-    const row = Math.floor(i / 1);
+  const margin = 20;
+  const topY = TITLE_Y + 20;
+  const bottomY = availH - margin;
+
+  for (const item of items) {
+    const r = getBubbleRadius(item, baseR);
+    // Yarn on left, linked insp center-right, unlinked scattered
+    let x: number, y: number;
+    const centerX = canvasW / 2;
+    if (item.type === "yarn") {
+      x = margin + Math.random() * (centerX * 0.7 - margin);
+    } else if (item.hasYarn) {
+      x = centerX + Math.random() * (canvasW * 0.75 - centerX);
+    } else {
+      x = margin + Math.random() * (canvasW - margin * 2);
+    }
+    y = topY + Math.random() * (bottomY - topY);
+
     result.push({
-      ...items[i],
-      baseX: startX,
-      baseY: TITLE_Y + 16 + row * d + r,
+      ...item,
+      baseX: x, baseY: y,
       r,
       floatPhase: Math.random() * Math.PI * 2,
       floatSpeed: 0.5 + Math.random() * 0.6,
       amp: AMP * (0.7 + Math.random() * 0.6),
     });
   }
-  for (let iter = 0; iter < 30; iter++) {
+
+  // Collision resolution with multiple iterations
+  for (let iter = 0; iter < 60; iter++) {
     for (let i = 0; i < result.length; i++) {
       for (let j = i + 1; j < result.length; j++) {
         const a = result[i];
@@ -68,16 +92,18 @@ function packSide(
           const overlap = (minDist - dist) / 2;
           const nx = dx / dist;
           const ny = dy / dist;
-          a.baseX -= nx * overlap * 0.4;
-          a.baseY -= ny * overlap * 0.4;
-          b.baseX += nx * overlap * 0.4;
-          b.baseY += ny * overlap * 0.4;
+          const push = 0.5;
+          a.baseX -= nx * overlap * push;
+          a.baseY -= ny * overlap * push;
+          b.baseX += nx * overlap * push;
+          b.baseY += ny * overlap * push;
         }
       }
-      result[i].baseX = Math.max(sideOffset + r, Math.min(sideOffset + sideWidth - r, result[i].baseX));
-      result[i].baseY = Math.max(TITLE_Y + 16 + r, result[i].baseY);
+      result[i].baseX = Math.max(margin, Math.min(canvasW - margin, result[i].baseX));
+      result[i].baseY = Math.max(topY, Math.min(bottomY, result[i].baseY));
     }
   }
+
   return result;
 }
 
@@ -159,21 +185,32 @@ export default function Home() {
   const yarnItems = useMemo(() => linkedYarns.map((y) => ({
     id: `y-${y.id}`, type: "yarn" as const, label: y.name,
     color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarn-detail?id=${y.id}`,
+    hasYarn: true,
   })), [linkedYarns]);
 
-  const inspItems = useMemo(() => inspirations.map((i) => ({
-    id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
-    color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null, href: `/inspiration-detail?id=${i.id}`,
-  })), [inspirations]);
+  const linkedInspItems = useMemo(() => inspirations
+    .filter(i => i.yarn_id !== null)
+    .map((i) => ({
+      id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
+      color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null,
+      href: `/inspiration-detail?id=${i.id}`, hasYarn: true,
+    })), [inspirations]);
 
-  const totalItems = yarnItems.length + inspItems.length;
+  const unlinkedInspItems = useMemo(() => inspirations
+    .filter(i => i.yarn_id === null)
+    .map((i) => ({
+      id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
+      color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null,
+      href: `/inspiration-detail?id=${i.id}`, hasYarn: false,
+    })), [inspirations]);
+
+  const totalItems = yarnItems.length + linkedInspItems.length + unlinkedInspItems.length;
 
   const availW = winSize.w;
   const availH = winSize.h - HEADER_H - TITLE_H - BTN_H;
 
   const canvasWidth = availW;
   const canvasHeight = Math.max(availH, 200);
-  const leftHalf = canvasWidth / 2;
 
   const r = useMemo(() => {
     const base = Math.max(canvasWidth, canvasHeight);
@@ -184,38 +221,10 @@ export default function Home() {
   }, [canvasWidth, canvasHeight, totalItems]);
 
   const allBubbles = useMemo(() => {
-    if (yarnItems.length === 0 && inspItems.length === 0) return [];
-    const yarnBubbles = packSide(yarnItems, 0, leftHalf, r);
-    const inspBubbles = packSide(inspItems, leftHalf, leftHalf, r);
-    const all = [...yarnBubbles, ...inspBubbles];
-    for (let iter = 0; iter < 20; iter++) {
-      for (let i = 0; i < all.length; i++) {
-        for (let j = i + 1; j < all.length; j++) {
-          const a = all[i];
-          const b = all[j];
-          if (a.baseX <= leftHalf && b.baseX >= leftHalf) continue;
-          if (b.baseX <= leftHalf && a.baseX >= leftHalf) continue;
-          const dx = b.baseX - a.baseX;
-          const dy = b.baseY - a.baseY;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = a.r + b.r + GAP;
-          if (dist < minDist && dist > 0.01) {
-            const overlap = (minDist - dist) / 2;
-            const nx = dx / dist;
-            const ny = dy / dist;
-            a.baseX -= nx * overlap * 0.4;
-            a.baseY -= ny * overlap * 0.4;
-            b.baseX += nx * overlap * 0.4;
-            b.baseY += ny * overlap * 0.4;
-          }
-        }
-        const side = all[i].baseX <= leftHalf ? 0 : leftHalf;
-        all[i].baseX = Math.max(side + r, Math.min(side + leftHalf - r, all[i].baseX));
-        all[i].baseY = Math.max(TITLE_Y + 16 + r, all[i].baseY);
-      }
-    }
-    return all;
-  }, [yarnItems, inspItems, leftHalf, r]);
+    if (yarnItems.length === 0 && linkedInspItems.length === 0 && unlinkedInspItems.length === 0) return [];
+    const allItems = [...yarnItems, ...linkedInspItems, ...unlinkedInspItems];
+    return scatterBubbles(allItems, canvasWidth, availH, r);
+  }, [yarnItems, linkedInspItems, unlinkedInspItems, canvasWidth, availH, r]);
 
   const svgHeight = useMemo(() => {
     if (allBubbles.length === 0) return canvasHeight;
@@ -451,8 +460,7 @@ export default function Home() {
                 </linearGradient>
               </defs>
 
-              <text x={canvasWidth * 0.15} y={TITLE_Y} textAnchor="middle" fill="#a855f7" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeYarnColumn}</text>
-              <text x={canvasWidth * 0.85} y={TITLE_Y} textAnchor="middle" fill="#ec4899" fontSize={Math.max(10, Math.round(r * 0.28))} fontWeight="bold">{texts.homeInspColumn}</text>
+
 
               {linkLines.map((line, idx) => (
                 <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#c084fc" strokeWidth={2} strokeOpacity={0.5} strokeDasharray="4 3" />
