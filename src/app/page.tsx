@@ -53,18 +53,15 @@ function scatterBubbles(
   const margin = 20;
   const topY = TITLE_Y + 20;
   const bottomY = availH - margin;
+  const leftHalf = canvasW / 2;
 
   for (const item of items) {
     const r = getBubbleRadius(item, baseR);
-    // Yarn on left, linked insp center-right, unlinked scattered
     let x: number, y: number;
-    const centerX = canvasW / 2;
     if (item.type === "yarn") {
-      x = margin + Math.random() * (centerX * 0.7 - margin);
-    } else if (item.hasYarn) {
-      x = centerX + Math.random() * (canvasW * 0.75 - centerX);
+      x = margin + Math.random() * (leftHalf - margin * 2);
     } else {
-      x = margin + Math.random() * (canvasW - margin * 2);
+      x = leftHalf + Math.random() * (canvasW - leftHalf - margin * 2);
     }
     y = topY + Math.random() * (bottomY - topY);
 
@@ -78,12 +75,13 @@ function scatterBubbles(
     });
   }
 
-  // Collision resolution with multiple iterations
   for (let iter = 0; iter < 60; iter++) {
     for (let i = 0; i < result.length; i++) {
       for (let j = i + 1; j < result.length; j++) {
         const a = result[i];
         const b = result[j];
+        // skip cross-half pairs
+        if ((a.baseX <= leftHalf && b.baseX >= leftHalf) || (b.baseX <= leftHalf && a.baseX >= leftHalf)) continue;
         const dx = b.baseX - a.baseX;
         const dy = b.baseY - a.baseY;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -99,7 +97,9 @@ function scatterBubbles(
           b.baseY += ny * overlap * push;
         }
       }
-      result[i].baseX = Math.max(margin, Math.min(canvasW - margin, result[i].baseX));
+      const side = result[i].baseX <= leftHalf ? 0 : leftHalf;
+      const sideW = side === 0 ? leftHalf : canvasW - leftHalf;
+      result[i].baseX = Math.max(side + margin, Math.min(side + sideW - margin, result[i].baseX));
       result[i].baseY = Math.max(topY, Math.min(bottomY, result[i].baseY));
     }
   }

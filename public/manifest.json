@@ -1,23 +1,29 @@
 {
-  "name": "YarnInspire",
-  "short_name": "YarnInspire",
+  "name": "Knit",
+  "short_name": "Knit",
   "description": "管理你的毛线库存，收集编织灵感",
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#9333EA",
   "theme_color": "#9333EA",
   "icons": [
     {
-      "src": "/api/icon-svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/api/icon-svg",
+      "src": "icons/icon-512x512.png",
       "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "maskable"
+      "purpose": "any"
     }
   ],
   "categories": ["lifestyle", "shopping"],
