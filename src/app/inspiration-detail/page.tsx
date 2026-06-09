@@ -30,7 +30,7 @@ function InspirationDetailContent() {
   };
 
   return (
-    <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-3xl mx-auto space-y-6">
       <button onClick={() => router.back()} className="text-sm text-purple-600 hover:text-purple-800">{texts.inspBack}</button>
 
@@ -135,7 +135,7 @@ function InspirationDetailContent() {
 
       {showEdit && <InspirationForm initial={insp} onClose={() => { setShowEdit(false); fetchInspirations(); }} />}
     </div>
-    </main>
+    </div>
   );
 }
 

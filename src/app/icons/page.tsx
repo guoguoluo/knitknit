@@ -49,7 +49,7 @@ export default function IconGeneratorPage() {
   }
 
   return (
-    <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-lg mx-auto mt-10 text-center">
       <h1 className="text-2xl font-bold mb-4">PWA 图标生成器</h1>
       <p className="text-gray-600 mb-6">
@@ -74,6 +74,6 @@ export default function IconGeneratorPage() {
         <strong>提示：</strong>下载后将文件放到 <code>public/icons/</code> 目录，然后更新 <code>manifest.json</code>
       </div>
     </div>
-    </main>
+    </div>
   );
 }

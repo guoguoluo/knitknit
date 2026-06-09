@@ -32,7 +32,7 @@ function YarnDetailContent() {
   });
 
   return (
-    <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-3xl mx-auto space-y-6">
       <button onClick={() => router.back()} className="text-sm text-purple-600 hover:text-purple-800">{texts.yarnBack}</button>
 
@@ -103,7 +103,7 @@ function YarnDetailContent() {
 
       {showEdit && <YarnForm initial={yarn} onClose={() => { setShowEdit(false); fetchYarns(); }} />}
     </div>
-    </main>
+    </div>
   );
 }
 

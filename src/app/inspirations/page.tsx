@@ -28,7 +28,7 @@ export default function InspirationsPage() {
   const platforms = Array.from(new Set(inspirations.map(i => i.platform).filter(Boolean)));
 
   return (
-    <main className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
+    <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-800">{texts.inspListHeading}</h1>
@@ -109,6 +109,6 @@ export default function InspirationsPage() {
         </div>
       )}
     </div>
-    </main>
+    </div>
   );
 }
