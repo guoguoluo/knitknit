@@ -46,15 +46,12 @@ function addImage(images: string[], seen: Set<string>, src: string, baseUrl: str
 }
 
 function extractTitle(html: string): string {
-  // og:title (most reliable, try both orderings in one regex)
   const ogTitle = html.match(/<meta\s+[^>]*(?:property=["']og:title["'][^>]*content=["']([^"']+)["']|content=["']([^"']+)["'][^>]*property=["']og:title["'])/i);
   if (ogTitle) return ogTitle[1] || ogTitle[2];
 
-  // twitter:title
   const twTitle = html.match(/<meta\s+[^>]*name=["']twitter:title["'][^>]*content=["']([^"']+)["']/i);
   if (twTitle) return twTitle[1];
 
-  // <title> with cleanup
   const tMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
   if (tMatch) {
     let t = tMatch[1].trim();
@@ -64,7 +61,6 @@ function extractTitle(html: string): string {
     return t;
   }
 
-  // <h1>
   const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
   if (h1) return h1[1].replace(/<[^>]+>/g, "").trim();
 
@@ -75,7 +71,6 @@ function extractImages(html: string, url: string, platform: string): string[] {
   const images: string[] = [];
   const seen = new Set<string>();
 
-  // XHS: try __INITIAL_STATE__ first (fast path, has all images)
   if (platform === "小红书") {
     const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*(\{[\s\S]+?\});\s*(?:<\/script>|window\.)/);
     if (stateMatch) {
@@ -90,7 +85,6 @@ function extractImages(html: string, url: string, platform: string): string[] {
         }
       } catch {}
     }
-    // XHS CDN fast match (skip full HTML parsing)
     const cdnMatch = html.match(/https?:\/\/sns-webpic-qc\.xhscdn\.com\/[^"'\s,]+/g);
     if (cdnMatch) {
       for (const u of cdnMatch) addImage(images, seen, u, url);
@@ -98,7 +92,6 @@ function extractImages(html: string, url: string, platform: string): string[] {
     }
   }
 
-  // Single-pass meta extraction: og:image + twitter:image
   const metaImgRe = /<meta\s+[^>]*(?:(?:property|name)=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']|content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["'])/gi;
   let m: RegExpExecArray | null;
   while ((m = metaImgRe.exec(html)) !== null) {
@@ -106,13 +99,11 @@ function extractImages(html: string, url: string, platform: string): string[] {
     if (images.length >= 2) break;
   }
 
-  // XHS CDN fallback
   if (images.length === 0 && platform === "小红书") {
     const ciUrls = html.match(/https?:\/\/ci\.xhscdn\.com\/[^"'\s,]+/g);
     if (ciUrls) for (const u of ciUrls) addImage(images, seen, u, url);
   }
 
-  // JSON-LD (only if no images yet)
   if (images.length === 0) {
     const ldMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
     if (ldMatch) {
@@ -131,7 +122,6 @@ function extractImages(html: string, url: string, platform: string): string[] {
     }
   }
 
-  // <img> tags (last resort, only if no images yet)
   if (images.length === 0) {
     const imgRe = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
     while ((m = imgRe.exec(html)) !== null) {
@@ -176,7 +166,30 @@ function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<string |
     });
 }
 
-export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<{ title: string; images: string[]; platform: string }> {
+function extractRavelryInfo(url: string): { title: string; pageUrl: string } | null {
+  try {
+    const host = new URL(url).hostname.replace("www.", "").toLowerCase();
+    if (!host.includes("ravelry")) return null;
+    const parts = new URL(url).pathname.split("/").filter(Boolean);
+    const libIdx = parts.indexOf("library");
+    if (libIdx >= 0 && libIdx + 1 < parts.length) {
+      const slug = parts[libIdx + 1];
+      const title = slug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+      return { title, pageUrl: url };
+    }
+  } catch {}
+  return null;
+}
+
+export interface ScrapeResult {
+  title: string;
+  images: string[];
+  platform: string;
+  partial?: boolean;
+  pageUrl?: string;
+}
+
+export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<ScrapeResult> {
   const platform = detectPlatform(url);
   const proxyUrls = CORS_PROXIES.map(fn => fn(url));
 
@@ -187,8 +200,14 @@ export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<{ ti
   for (const result of results) {
     if (result.status === "fulfilled" && result.value && result.value.length > 100) {
       const data = parseHtmlForData(result.value, url);
-      if (data.title || data.images.length > 0) return data;
+      if (data.title || data.images.length > 0) return { ...data, platform };
     }
+  }
+
+  // Fallback for Ravelry: extract pattern name from URL
+  const ravelry = extractRavelryInfo(url);
+  if (ravelry) {
+    return { title: ravelry.title, images: [], platform, partial: true, pageUrl: ravelry.pageUrl };
   }
 
   return { title: "", images: [], platform };
