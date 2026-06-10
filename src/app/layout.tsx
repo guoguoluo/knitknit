@@ -16,7 +16,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   userScalable: true,
-  themeColor: "#a855f7",
+  themeColor: "#F8EFDF",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -30,8 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="apple-touch-icon" sizes="192x192" href={`${basePath}/icons/icon-192x192.png`} />
         <link rel="apple-touch-icon" sizes="512x512" href={`${basePath}/icons/icon-512x512.png`} />
       </head>
-      <body className="fabric-body h-screen flex flex-col">
-        <div className="grain-overlay fixed inset-0 z-0" />
+      <body className="h-screen flex flex-col">
         <nav className="relative z-40 bg-white/90 backdrop-blur-lg border-b shrink-0 h-14 stitch-border-b">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
             <Link href="/" className="font-bold text-lg text-[#2B2B2B]">{texts.brand}</Link>

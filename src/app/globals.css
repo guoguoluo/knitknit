@@ -4,22 +4,11 @@
 
 @layer base {
   body {
-    background-color: #f5efe6;
+    background-color: #F8EFDF;
   }
 }
 
 @layer components {
-  .fabric-body {
-    background-image: url("/knitknit/texture/bg-fabric-cream-1024.png");
-    background-repeat: repeat;
-  }
-  .grain-overlay {
-    background-image: url("/knitknit/texture/grain-soft-1024.png");
-    background-repeat: repeat;
-    background-blend-mode: multiply;
-    opacity: 0.18;
-    pointer-events: none;
-  }
   .card-yarn {
     background-color: #E9E3D7;
   }
