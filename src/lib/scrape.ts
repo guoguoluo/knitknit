@@ -1,4 +1,4 @@
-const PROXY_TIMEOUT = 8000;
+const PROXY_TIMEOUT = 5000;
 
 const CORS_PROXIES = [
   (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
@@ -32,120 +32,125 @@ function detectPlatform(url: string): string {
   return "";
 }
 
-function parseHtmlForData(html: string, url: string): { title: string; images: string[]; platform: string } {
+function addImage(images: string[], seen: Set<string>, src: string, baseUrl: string): void {
+  if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
+  let resolved: string;
+  try {
+    resolved = src.startsWith("http") ? src : src.startsWith("//") ? "https:" + src : new URL(src, baseUrl).href;
+  } catch { return; }
+  if (!resolved || seen.has(resolved)) return;
+  const lower = resolved.toLowerCase();
+  if (lower.includes("avatar") || lower.includes("icon") || lower.includes("logo") || lower.endsWith(".svg")) return;
+  seen.add(resolved);
+  images.push(resolved);
+}
+
+function extractTitle(html: string): string {
+  // og:title (most reliable, try both orderings in one regex)
+  const ogTitle = html.match(/<meta\s+[^>]*(?:property=["']og:title["'][^>]*content=["']([^"']+)["']|content=["']([^"']+)["'][^>]*property=["']og:title["'])/i);
+  if (ogTitle) return ogTitle[1] || ogTitle[2];
+
+  // twitter:title
+  const twTitle = html.match(/<meta\s+[^>]*name=["']twitter:title["'][^>]*content=["']([^"']+)["']/i);
+  if (twTitle) return twTitle[1];
+
+  // <title> with cleanup
+  const tMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
+  if (tMatch) {
+    let t = tMatch[1].trim();
+    for (const suffix of SITE_SUFFIXES) {
+      if (t.endsWith(suffix)) { t = t.slice(0, -suffix.length).trim(); break; }
+    }
+    return t;
+  }
+
+  // <h1>
+  const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+  if (h1) return h1[1].replace(/<[^>]+>/g, "").trim();
+
+  return "";
+}
+
+function extractImages(html: string, url: string, platform: string): string[] {
   const images: string[] = [];
   const seen = new Set<string>();
 
-  const addImage = (src: string) => {
-    if (!src || src.startsWith("data:") || src.startsWith("blob:")) return;
-    try {
-      const resolved = src.startsWith("http") ? src : src.startsWith("//") ? "https:" + src : new URL(src, url).href;
-      if (!resolved || seen.has(resolved)) return;
-      const lower = resolved.toLowerCase();
-      if (lower.includes("avatar") || lower.includes("icon") || lower.includes("logo") || lower.endsWith(".svg")) return;
-      seen.add(resolved);
-      images.push(resolved);
-    } catch {}
-  };
-
-  const platform = detectPlatform(url);
-
-  const ogImg = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
-  if (ogImg) addImage(ogImg[1]);
-  const ogImg2 = html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["'][^>]*\/?>/i);
-  if (ogImg2) addImage(ogImg2[1]);
-
-  const twImg = html.match(/<meta\s+[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
-  if (twImg) addImage(twImg[1]);
-
+  // XHS: try __INITIAL_STATE__ first (fast path, has all images)
   if (platform === "小红书") {
-    const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]+?});/);
+    const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*(\{[\s\S]+?\});\s*(?:<\/script>|window\.)/);
     if (stateMatch) {
       try {
         const state = JSON.parse(stateMatch[1]);
         const note = state?.note?.noteDetail?.note;
-        if (note?.imageList) {
+        if (note?.imageList?.length > 0) {
           for (const img of note.imageList) {
-            addImage(img.urlDefault || img.url || img.infoList?.[0]?.url);
+            addImage(images, seen, img.urlDefault || img.url || img.infoList?.[0]?.url, url);
           }
+          if (images.length > 0) return images.slice(0, 5);
         }
       } catch {}
     }
-    const xhsUrls = html.match(/https?:\/\/sns-webpic-qc\.xhscdn\.com\/[^"'\s]+/gi);
-    if (xhsUrls) for (const u of xhsUrls) addImage(u);
-    const ciUrls = html.match(/https?:\/\/ci\.xhscdn\.com\/[^"'\s]+(?:jpe?g|png|webp)[^"'\s]*/gi);
-    if (ciUrls) for (const u of ciUrls) addImage(u);
+    // XHS CDN fast match (skip full HTML parsing)
+    const cdnMatch = html.match(/https?:\/\/sns-webpic-qc\.xhscdn\.com\/[^"'\s,]+/g);
+    if (cdnMatch) {
+      for (const u of cdnMatch) addImage(images, seen, u, url);
+      if (images.length > 0) return images.slice(0, 5);
+    }
   }
 
-  const ldMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
-  if (ldMatch) {
-    try {
-      const d = JSON.parse(ldMatch[1]);
-      const extract = (obj: any) => {
-        if (!obj || typeof obj !== "object") return;
-        if (obj.image) {
-          if (typeof obj.image === "string") addImage(obj.image);
-          else if (Array.isArray(obj.image)) obj.image.forEach((i: any) => typeof i === "string" && addImage(i));
-        }
-        for (const v of Object.values(obj)) extract(v);
-      };
-      extract(d);
-    } catch {}
+  // Single-pass meta extraction: og:image + twitter:image
+  const metaImgRe = /<meta\s+[^>]*(?:(?:property|name)=["'](?:og:image|twitter:image)["'][^>]*content=["']([^"']+)["']|content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image|twitter:image)["'])/gi;
+  let m: RegExpExecArray | null;
+  while ((m = metaImgRe.exec(html)) !== null) {
+    addImage(images, seen, m[1] || m[2], url);
+    if (images.length >= 2) break;
   }
 
+  // XHS CDN fallback
+  if (images.length === 0 && platform === "小红书") {
+    const ciUrls = html.match(/https?:\/\/ci\.xhscdn\.com\/[^"'\s,]+/g);
+    if (ciUrls) for (const u of ciUrls) addImage(images, seen, u, url);
+  }
+
+  // JSON-LD (only if no images yet)
+  if (images.length === 0) {
+    const ldMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
+    if (ldMatch) {
+      try {
+        const d = JSON.parse(ldMatch[1]);
+        const extract = (obj: any) => {
+          if (!obj || typeof obj !== "object") return;
+          if (obj.image) {
+            if (typeof obj.image === "string") addImage(images, seen, obj.image, url);
+            else if (Array.isArray(obj.image)) obj.image.forEach((i: any) => { if (typeof i === "string") addImage(images, seen, i, url); });
+          }
+          for (const v of Object.values(obj)) extract(v);
+        };
+        extract(d);
+      } catch {}
+    }
+  }
+
+  // <img> tags (last resort, only if no images yet)
   if (images.length === 0) {
     const imgRe = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
-    let m;
     while ((m = imgRe.exec(html)) !== null) {
-      const src = m[1];
-      const alt = (html.slice(Math.max(0, m.index - 200), m.index + 200).match(/alt=["']([^"']*)["']/i) || ["", ""])[1].toLowerCase();
-      if (alt.includes("icon") || alt.includes("logo") || alt.includes("avatar")) continue;
-      addImage(src);
-      if (images.length >= 3) break;
+      addImage(images, seen, m[1], url);
+      if (images.length >= 1) break;
     }
   }
 
-  let title = "";
-
-  const ogTitle = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
-  if (ogTitle) title = ogTitle[1];
-  const ogTitle2 = html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["'][^>]*\/?>/i);
-  if (!title && ogTitle2) title = ogTitle2[1];
-
-  if (!title) {
-    const twTitle = html.match(/<meta\s+[^>]*name=["']twitter:title["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
-    if (twTitle) title = twTitle[1];
-  }
-
-  if (!title) {
-    const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-    if (h1) title = h1[1].replace(/<[^>]+>/g, "").trim();
-  }
-
-  if (!title) {
-    const tMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
-    if (tMatch) {
-      title = tMatch[1].trim();
-      for (const suffix of SITE_SUFFIXES) {
-        if (title.endsWith(suffix)) {
-          title = title.slice(0, -suffix.length).trim();
-          break;
-        }
-      }
-    }
-  }
-
-  if (!title) {
-    try {
-      const path = decodeURIComponent(new URL(url).pathname.replace(/\/$/, "").split("/").pop() || "");
-      if (path && path.length > 3 && !path.includes(".")) title = path;
-    } catch {}
-  }
-
-  return { title, images: images.slice(0, 5), platform: platform || "" };
+  return images.slice(0, 5);
 }
 
-async function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<string | null> {
+function parseHtmlForData(html: string, url: string): { title: string; images: string[]; platform: string } {
+  const platform = detectPlatform(url);
+  const title = extractTitle(html);
+  const images = extractImages(html, url, platform);
+  return { title, images, platform };
+}
+
+function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT);
   const combinedSignal = signal ?? controller.signal;
@@ -153,30 +158,36 @@ async function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<st
   const onParentAbort = signal ? () => controller.abort() : undefined;
   if (onParentAbort) signal!.addEventListener("abort", onParentAbort, { once: true });
 
-  try {
-    const res = await fetch(proxyUrl, { signal: combinedSignal, cache: "no-cache" });
-    if (!res.ok) return null;
-
-    const ct = res.headers.get("content-type") || "";
-    if (ct.includes("json") || proxyUrl.includes("/get?")) {
-      const json = await res.json();
-      return typeof json === "string" ? json : json.contents || json.body || "";
-    }
-    return await res.text();
-  } finally {
-    clearTimeout(timeoutId);
-    if (onParentAbort) signal?.removeEventListener("abort", onParentAbort);
-  }
+  return fetch(proxyUrl, { signal: combinedSignal, cache: "no-cache" })
+    .then(res => {
+      if (!res.ok) return null;
+      const ct = res.headers.get("content-type") || "";
+      if (ct.includes("json") || proxyUrl.includes("/get?")) {
+        return res.json().then(json =>
+          typeof json === "string" ? json : json.contents || json.body || ""
+        );
+      }
+      return res.text();
+    })
+    .catch(() => null)
+    .finally(() => {
+      clearTimeout(timeoutId);
+      if (onParentAbort) signal?.removeEventListener("abort", onParentAbort);
+    });
 }
 
 export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<{ title: string; images: string[]; platform: string }> {
   const platform = detectPlatform(url);
+  const proxyUrls = CORS_PROXIES.map(fn => fn(url));
 
-  for (const proxyFn of CORS_PROXIES) {
-    const html = await fetchViaProxy(proxyFn(url), signal);
-    if (html && html.length > 100) {
-      const result = parseHtmlForData(html, url);
-      if (result.title || result.images.length > 0) return result;
+  const results = await Promise.allSettled(
+    proxyUrls.map(proxyUrl => fetchViaProxy(proxyUrl, signal))
+  );
+
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value && result.value.length > 100) {
+      const data = parseHtmlForData(result.value, url);
+      if (data.title || data.images.length > 0) return data;
     }
   }
 
