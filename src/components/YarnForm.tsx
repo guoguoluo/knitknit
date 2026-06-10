@@ -250,7 +250,7 @@ export default function YarnForm({ onClose, initial }: Props) {
             )}
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="inline-block flex-1 px-4 py-2 rounded-[18px] btn-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+            <button type="submit" className="btnPatch btnPatch--white">
               {initial ? "保存" : "添加"}
             </button>
             <button type="button" onClick={onClose} className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">取消</button>

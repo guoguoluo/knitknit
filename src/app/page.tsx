@@ -417,7 +417,7 @@ export default function Home() {
             <div className="text-6xl mb-4 opacity-70">🧶</div>
             <h2 className="text-xl font-bold text-gray-700 mb-2">开始收集灵感吧</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-xs">去小红书、Ravelry 发现好看的毛衣和图解，添加到这里</p>
-            <Link href="/inspirations" className="inline-block px-6 py-2.5 rounded-[18px] btn-coffee font-semibold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+            <Link href="/inspirations" className="btnPatch btnPatch--coffee">
               + 添加灵感
             </Link>
           </div>
@@ -532,10 +532,10 @@ export default function Home() {
       {/* action buttons */}
       <section className="text-center shrink-0 pb-4 pt-0">
         <div className="flex justify-center gap-3">
-          <Link href="/yarns" className="inline-block px-5 py-2.5 rounded-[18px] btn-white font-semibold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+          <Link href="/yarns" className="btnPatch btnPatch--white">
             {texts.homeManageYarns}
           </Link>
-          <Link href="/inspirations" className="inline-block px-5 py-2.5 rounded-[18px] btn-coffee font-semibold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+          <Link href="/inspirations" className="btnPatch btnPatch--coffee">
             {texts.homeBrowseInspirations}
           </Link>
         </div>
