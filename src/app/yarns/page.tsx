@@ -24,8 +24,8 @@ export default function YarnsPage() {
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">{texts.yarnListHeading}</h1>
-        <button onClick={() => setShowForm(true)} className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow hover:shadow-lg transition">
+        <h1 className="text-2xl font-bold text-[#2B2B2B]">{texts.yarnListHeading}</h1>
+        <button onClick={() => setShowForm(true)} className="relative overflow-hidden px-4 py-2 rounded-[18px] surface-felt-accent text-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
           {texts.yarnListAdd}
         </button>
       </div>
@@ -34,14 +34,14 @@ export default function YarnsPage() {
         <input
           type="text"
           placeholder={texts.yarnListSearch}
-          className="w-full sm:flex-1 px-4 py-2 rounded-xl border border-purple-200 bg-white/70 focus:outline-none focus:ring-2 focus:ring-purple-300"
+          className="w-full sm:flex-1 px-4 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none focus:ring-2 focus:ring-[rgba(47,95,158,0.3)] text-[#2B2B2B]"
           value={filter}
           onChange={e => setFilter(e.target.value)}
         />
         <select
           value={filterTag}
           onChange={e => setFilterTag(e.target.value)}
-          className="w-full sm:w-auto px-3 py-2 rounded-xl border border-purple-200 bg-white/70 focus:outline-none"
+          className="w-full sm:w-auto px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]"
         >
           <option value="">{texts.yarnListAllTags}</option>
           {allTags.map(t => <option key={t} value={t}>{t}</option>)}
@@ -51,42 +51,42 @@ export default function YarnsPage() {
       {showForm && <YarnForm onClose={() => setShowForm(false)} />}
 
       {loading ? (
-        <div className="text-center py-12 text-gray-400">{texts.yarnListLoading}</div>
+        <div className="text-center py-12 text-[#6B6B6B]">{texts.yarnListLoading}</div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400">{texts.yarnListEmpty}</div>
+        <div className="text-center py-12 text-[#6B6B6B]">{texts.yarnListEmpty}</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map(yarn => (
             <Link href={`/yarn-detail?id=${yarn.id}`} key={yarn.id}>
-              <div className="bg-white rounded-2xl p-4 border border-purple-100 shadow-sm hover:shadow-md transition cursor-pointer group">
+              <div className="relative overflow-hidden card-knit rounded-[16px] p-4 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition cursor-pointer group">
                 {yarn.photo ? (
-                  <img src={yarn.photo} alt={yarn.name} className="w-full h-40 object-cover rounded-xl mb-3" />
+                  <img src={yarn.photo} alt={yarn.name} className="w-full h-40 object-cover rounded-[16px] mb-3" />
                 ) : (
-                  <div className="w-full h-40 bg-gradient-to-br from-purple-100 to-pink-100 rounded-xl mb-3 flex items-center justify-center text-4xl">
+                  <div className="w-full h-40 bg-[#f5efe6] rounded-[16px] mb-3 flex items-center justify-center text-4xl">
                     🧶
                   </div>
                 )}
-                <h3 className="font-semibold text-gray-800 group-hover:text-purple-600 transition">{yarn.name}</h3>
-                <div className="flex flex-wrap gap-1 mt-2 text-xs text-gray-500">
-                  {yarn.brand && <span className="px-2 py-0.5 bg-gray-100 rounded-full">{yarn.brand}</span>}
+                <h3 className="font-semibold text-[#2B2B2B] group-hover:text-[#2B2B2B] transition">{yarn.name}</h3>
+                <div className="flex flex-wrap gap-1 mt-2 text-xs text-[#6B6B6B]">
+                  {yarn.brand && <span className="px-2 py-0.5 bg-white/60 rounded-full">{yarn.brand}</span>}
                   {yarn.color && <span className="inline-block w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: yarn.color }} title={yarn.color} />}
                   {yarn.colors?.map(c => (
                     <span key={c} className="inline-block w-5 h-5 rounded-full border border-gray-300" style={{ backgroundColor: c }} title={c} />
                   ))}
-                  {yarn.material && <span className="px-2 py-0.5 bg-gray-100 rounded-full">{yarn.material}</span>}
-                  {yarn.weight && <span className="px-2 py-0.5 bg-gray-100 rounded-full">{yarn.weight}</span>}
-                  {yarn.quantity > 0 && <span className="px-2 py-0.5 bg-gray-100 rounded-full">{yarn.quantity}{yarn.unit}</span>}
+                  {yarn.material && <span className="px-2 py-0.5 bg-white/60 rounded-full">{yarn.material}</span>}
+                  {yarn.weight && <span className="px-2 py-0.5 bg-white/60 rounded-full">{yarn.weight}</span>}
+                  {yarn.quantity > 0 && <span className="px-2 py-0.5 bg-white/60 rounded-full">{yarn.quantity}{yarn.unit}</span>}
                 </div>
                 {yarn.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
                     {yarn.tags.map(t => (
-                      <span key={t} className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">{t}</span>
+                      <span key={t} className="px-2 py-0.5 surface-felt text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>
                     ))}
                   </div>
                 )}
                 <button
                   onClick={e => { e.preventDefault(); deleteYarn(yarn.id); }}
-                  className="mt-3 text-xs text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"
+                  className="mt-3 text-xs text-[#6B6B6B] hover:text-red-600 opacity-0 group-hover:opacity-100 transition"
                 >
                   {texts.yarnListDelete}
                 </button>

@@ -34,36 +34,36 @@ function YarnDetailContent() {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-3xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="text-sm text-purple-600 hover:text-purple-800">{texts.yarnBack}</button>
+      <button onClick={() => router.back()} className="relative overflow-hidden px-3 py-1.5 rounded-[18px] surface-felt text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnBack}</button>
 
-      <div className="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm">
+      <div className="relative overflow-hidden card-knit rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
           {yarn.photo ? (
-            <img src={yarn.photo} alt={yarn.name} className="w-full sm:w-40 h-40 object-cover rounded-2xl" />
+            <img src={yarn.photo} alt={yarn.name} className="w-full sm:w-40 h-40 object-cover rounded-[16px]" />
           ) : (
-            <div className="w-full sm:w-40 h-40 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl flex items-center justify-center text-5xl">🧶</div>
+            <div className="w-full sm:w-40 h-40 bg-[#f5efe6] rounded-[16px] flex items-center justify-center text-5xl">🧶</div>
           )}
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-800">{yarn.name}</h1>
+            <h1 className="text-2xl font-bold text-[#2B2B2B]">{yarn.name}</h1>
             <div className="flex flex-wrap gap-2 mt-3">
-              {yarn.brand && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">{yarn.brand}</span>}
+              {yarn.brand && <span className="px-3 py-1 bg-white/60 rounded-full text-sm text-[#6B6B6B]">{yarn.brand}</span>}
               {yarn.color && <span className="inline-block w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: yarn.color }} title={yarn.color} />}
               {yarn.colors?.map(c => (
                 <span key={c} className="inline-block w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: c }} title={c} />
               ))}
-              {yarn.material && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">{yarn.material}</span>}
-              {yarn.weight && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">{yarn.weight}</span>}
-              {yarn.quantity > 0 && <span className="px-3 py-1 bg-gray-100 rounded-full text-sm text-gray-600">{yarn.quantity}{yarn.unit}</span>}
+              {yarn.material && <span className="px-3 py-1 bg-white/60 rounded-full text-sm text-[#6B6B6B]">{yarn.material}</span>}
+              {yarn.weight && <span className="px-3 py-1 bg-white/60 rounded-full text-sm text-[#6B6B6B]">{yarn.weight}</span>}
+              {yarn.quantity > 0 && <span className="px-3 py-1 bg-white/60 rounded-full text-sm text-[#6B6B6B]">{yarn.quantity}{yarn.unit}</span>}
             </div>
             {yarn.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-3">
-                {yarn.tags.map(t => <span key={t} className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded-full">{t}</span>)}
+                {yarn.tags.map(t => <span key={t} className="px-2 py-0.5 surface-felt text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>)}
               </div>
             )}
-            {yarn.notes && <p className="mt-3 text-sm text-gray-500">{yarn.notes}</p>}
+            {yarn.notes && <p className="mt-3 text-sm text-[#6B6B6B]">{yarn.notes}</p>}
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setShowEdit(true)} className="px-3 py-1.5 text-sm rounded-lg border border-purple-200 text-purple-600 hover:bg-purple-50 transition">{texts.yarnEdit}</button>
-              <button onClick={async () => { await deleteYarn(yarn.id); router.push("/yarns"); }} className="px-3 py-1.5 text-sm rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition">{texts.yarnDelete}</button>
+              <button onClick={() => setShowEdit(true)} className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnEdit}</button>
+              <button onClick={async () => { await deleteYarn(yarn.id); router.push("/yarns"); }} className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-red-600 border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnDelete}</button>
             </div>
           </div>
         </div>
@@ -72,13 +72,13 @@ function YarnDetailContent() {
       <RecommendationPanel color={yarn.color} material={yarn.material} weight={yarn.weight} tags={yarn.tags} colors={yarn.colors} />
 
       {relatedInspirations.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 border border-purple-100 shadow-sm">
-          <h3 className="font-bold text-gray-800 mb-3">{texts.yarnRelatedInspirations}</h3>
+        <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRelatedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {relatedInspirations.map(insp => (
-              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-xl border border-purple-100 hover:bg-purple-50 transition">
-                <div className="font-medium text-sm text-gray-800">{insp.title}</div>
-                <div className="text-xs text-gray-400 mt-1">{insp.platform}</div>
+              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-[16px] surface-felt border border-[rgba(47,95,158,0.15)] hover:shadow-lg transition">
+                <div className="font-medium text-sm text-[#2B2B2B]">{insp.title}</div>
+                <div className="text-xs text-[#6B6B6B] mt-1">{insp.platform}</div>
               </Link>
             ))}
           </div>
@@ -86,14 +86,14 @@ function YarnDetailContent() {
       )}
 
       {matchedInspirations.length > 0 && (
-        <div className="bg-white rounded-2xl p-5 border border-purple-100 shadow-sm">
-          <h3 className="font-bold text-gray-800 mb-3">{texts.yarnRecommendedInspirations}</h3>
+        <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+          <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRecommendedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {matchedInspirations.map(insp => (
-              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-xl border border-purple-100 hover:bg-purple-50 transition">
-                <div className="font-medium text-sm text-gray-800">{insp.title}</div>
+              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-[16px] surface-felt border border-[rgba(47,95,158,0.15)] hover:shadow-lg transition">
+                <div className="font-medium text-sm text-[#2B2B2B]">{insp.title}</div>
                 <div className="flex gap-1 mt-1">
-                  {insp.tags.slice(0, 3).map(t => <span key={t} className="px-1.5 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">{t}</span>)}
+                  {insp.tags.slice(0, 3).map(t => <span key={t} className="px-1.5 py-0.5 surface-felt text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>)}
                 </div>
               </Link>
             ))}

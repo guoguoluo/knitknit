@@ -199,61 +199,61 @@ export default function YarnForm({ onClose, initial }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="relative overflow-hidden card-knit rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-gray-800">{initial ? "编辑毛线" : "添加毛线"}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+          <h2 className="text-lg font-bold text-[#2B2B2B]">{initial ? "编辑毛线" : "添加毛线"}</h2>
+          <button onClick={onClose} className="text-[#6B6B6B] hover:text-[#2B2B2B] text-xl">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input required placeholder="名称 *" className="w-full px-3 py-2 rounded-xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300" value={name} onChange={e => setName(e.target.value)} />
-          <input placeholder="品牌" className="w-full px-3 py-2 rounded-xl border border-purple-200 focus:outline-none focus:ring-2 focus:ring-purple-300" value={brand} onChange={e => setBrand(e.target.value)} />
+          <input required placeholder="名称 *" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none focus:ring-2 focus:ring-[rgba(47,95,158,0.3)] text-[#2B2B2B]" value={name} onChange={e => setName(e.target.value)} />
+          <input placeholder="品牌" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none focus:ring-2 focus:ring-[rgba(47,95,158,0.3)] text-[#2B2B2B]" value={brand} onChange={e => setBrand(e.target.value)} />
           <div className="flex gap-3">
-            <input placeholder="主颜色" className="flex-1 px-3 py-2 rounded-xl border border-purple-200 focus:outline-none" value={color} onChange={e => setColor(e.target.value)} />
-            <input type="color" className="w-10 h-10 rounded-xl border border-purple-200 cursor-pointer" value={color || "#d946ef"} onChange={e => setColor(e.target.value)} />
+            <input placeholder="主颜色" className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={color} onChange={e => setColor(e.target.value)} />
+            <input type="color" className="w-10 h-10 rounded-[16px] border border-[rgba(47,95,158,0.2)] cursor-pointer" value={color || "#d946ef"} onChange={e => setColor(e.target.value)} />
           </div>
 
           <div>
-            <label className="block text-sm text-gray-500 mb-1">多种颜色（可选）</label>
+            <label className="block text-sm text-[#6B6B6B] mb-1">多种颜色（可选）</label>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {colors.map((c, i) => (
                 <span key={i} className="inline-flex items-center gap-1">
                   <span className="inline-block w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: c }} />
-                  <button type="button" onClick={() => removeColor(i)} className="text-gray-400 hover:text-red-500 text-xs">&times;</button>
+                  <button type="button" onClick={() => removeColor(i)} className="text-[#6B6B6B] hover:text-red-600 text-xs">&times;</button>
                 </span>
               ))}
             </div>
             <div className="flex gap-2">
-              <input type="color" className="w-9 h-9 rounded-lg border border-purple-200 cursor-pointer" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} />
-              <button type="button" onClick={addColor} className="px-3 py-1 text-xs rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 transition">添加色块</button>
+              <input type="color" className="w-9 h-9 rounded-lg border border-[rgba(47,95,158,0.2)] cursor-pointer" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} />
+              <button type="button" onClick={addColor} className="px-3 py-1 text-xs rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition">添加色块</button>
             </div>
-            {analyzing && <p className="text-xs text-purple-400 mt-1">正在从图片识别颜色...</p>}
+            {analyzing && <p className="text-xs text-[#6B6B6B] mt-1">正在从图片识别颜色...</p>}
           </div>
 
-          <input placeholder="材质（如：羊毛、棉、亚麻）" className="w-full px-3 py-2 rounded-xl border border-purple-200 focus:outline-none" value={material} onChange={e => setMaterial(e.target.value)} />
+          <input placeholder="材质（如：羊毛、棉、亚麻）" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={material} onChange={e => setMaterial(e.target.value)} />
           <div className="flex gap-3">
-            <input type="number" placeholder="数量" className="flex-1 px-3 py-2 rounded-xl border border-purple-200 focus:outline-none" value={quantity} onChange={e => setQuantity(Number(e.target.value))} />
-            <select className="px-3 py-2 rounded-xl border border-purple-200" value={unit} onChange={e => setUnit(e.target.value)}>
+            <input type="number" placeholder="数量" className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={quantity} onChange={e => setQuantity(Number(e.target.value))} />
+            <select className="px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 text-[#2B2B2B]" value={unit} onChange={e => setUnit(e.target.value)}>
               <option value="g">克(g)</option><option value="m">米(m)</option>
               <option value="个">个</option><option value="团">团</option>
             </select>
           </div>
-          <input placeholder="标签（用逗号分隔，如：粗线, 暖色, 冬季）" className="w-full px-3 py-2 rounded-xl border border-purple-200 focus:outline-none" value={tagsStr} onChange={e => setTagsStr(e.target.value)} />
-          <textarea placeholder="备注信息" rows={3} className="w-full px-3 py-2 rounded-xl border border-purple-200 focus:outline-none" value={notes} onChange={e => setNotes(e.target.value)} />
+          <input placeholder="标签（用逗号分隔，如：粗线, 暖色, 冬季）" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={tagsStr} onChange={e => setTagsStr(e.target.value)} />
+          <textarea placeholder="备注信息" rows={3} className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={notes} onChange={e => setNotes(e.target.value)} />
           <div>
-            <label className="block text-sm text-gray-500 mb-1">照片（上传后自动去背景、识别颜色）</label>
+            <label className="block text-sm text-[#6B6B6B] mb-1">照片（上传后自动去背景、识别颜色）</label>
             <input type="file" accept="image/*" onChange={handlePhoto} className="text-sm" />
-            {uploading && <span className="text-xs text-purple-500 ml-2">处理中...</span>}
+            {uploading && <span className="text-xs text-[#6B6B6B] ml-2">处理中...</span>}
             {photo && (
               <div className="mt-2 relative inline-block">
-                <img src={photo} alt="preview" className="w-28 h-28 object-contain rounded-xl border border-purple-200" />
+                <img src={photo} alt="preview" className="w-28 h-28 object-contain rounded-[16px] border border-[rgba(47,95,158,0.2)]" />
               </div>
             )}
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="flex-1 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold shadow hover:shadow-lg transition">
+            <button type="submit" className="relative overflow-hidden flex-1 px-4 py-2 rounded-[18px] surface-felt-accent text-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
               {initial ? "保存" : "添加"}
             </button>
-            <button type="button" onClick={onClose} className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition">取消</button>
+            <button type="button" onClick={onClose} className="relative overflow-hidden px-4 py-2 rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">取消</button>
           </div>
         </form>
       </div>

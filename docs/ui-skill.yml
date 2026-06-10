@@ -1,0 +1,161 @@
+```yaml
+skill:
+  name: "毛线宇宙 - 织物拟物 UI + 资源驱动渲染"
+  version: "1.1"
+  scope:
+    app: "毛线宇宙 PWA"
+    agent_goal: "使用 public 下的纹理/图标/素材资源自动落地 UI 风格与图谱渲染"
+
+  assets_convention:
+    # 约定：全部为 Web 可直接访问的静态资源（Vite/Next 均通用）
+    root: "public/"
+    textures_dir: "public/textures/"
+    icons_dir: "public/icons/"
+    yarn_assets_dir: "public/assets/yarn-balls/"
+
+    required_textures:
+      background_fabric: "/textures/bg-fabric-cream-1024.png"
+      felt_cream: "/textures/felt-cream-1024.png"
+      felt_pink: "/textures/felt-pink-1024.png"
+      knit_jersey: "/textures/knit-jersey-beige-1024.png"
+      grain_soft: "/textures/grain-soft-1024.png"
+      stitch_line: "/textures/stitch-line-indigo.png"
+
+    required_icons:
+      pwa_icon_192: "/icons/icon-192x192.png"
+      pwa_icon_512: "/icons/icon-512x512.png"
+
+    yarn_node_assets:
+      # 基础毛线团素材（建议至少提供浅色底与深色底两张，便于着色）
+      # 若只有单张也可运行：agent 需走“tint 着色”策略
+      base_neutral: "/assets/yarn-balls/yarn-base-neutral.png"
+      base_light: "/assets/yarn-balls/yarn-base-light.png"
+      base_dark: "/assets/yarn-balls/yarn-base-dark.png"
+      # 可选：不同形态/线头方向
+      with_tail_optional: "/assets/yarn-balls/yarn-with-tail.png"
+
+  pwa_manifest:
+    instruction: "使用 icons 目录替换 PWA 桌面图标"
+    icons:
+      - src: "/icons/icon-192x192.png"
+        sizes: "192x192"
+        type: "image/png"
+      - src: "/icons/icon-512x512.png"
+        sizes: "512x512"
+        type: "image/png"
+    notes:
+      - "构建后用 npm run build && npm run preview 验证安装图标是否生效"
+      - "如系统缓存旧图标：提高 manifest 版本或更换文件名/加哈希"
+
+  ui_style:
+    theme_name: "Textile Skeuomorphism"
+    tone:
+      mood: ["温暖", "治愈", "手作", "干净", "轻拟物"]
+      avoid: ["霓虹", "玻璃拟态", "金属质感", "赛博风", "强对比硬阴影", "过度扁平"]
+    textures_usage:
+      global_background:
+        image: "/textures/bg-fabric-cream-1024.png"
+        repeat: "repeat"
+        blend:
+          overlay_grain:
+            image: "/textures/grain-soft-1024.png"
+            opacity: 0.18
+            mix_blend_mode: "multiply"
+      surfaces:
+        card_surface:
+          image: "/textures/knit-jersey-beige-1024.png"
+          repeat: "repeat"
+          overlay_grain_opacity: 0.10
+        patch_button_surface:
+          image: "/textures/felt-cream-1024.png"
+          repeat: "repeat"
+          overlay_grain_opacity: 0.12
+        patch_button_surface_accent:
+          image: "/textures/felt-pink-1024.png"
+          repeat: "repeat"
+          overlay_grain_opacity: 0.10
+      stitches:
+        border_stitch_asset: "/textures/stitch-line-indigo.png"
+        recommended_application:
+          - "作为按钮/卡片边框装饰（CSS background-image 平铺或 9-slice）"
+          - "作为分割线/强调线（低对比、细线）"
+    component_tokens:
+      radius:
+        card: 16
+        patch_button: 18
+        chip: 999
+      shadow:
+        soft:
+          - "0 8px 24px rgba(0,0,0,0.12)"
+          - "inset 0 1px 0 rgba(255,255,255,0.45)"
+      text:
+        primary: "#2B2B2B"
+        muted: "#6B6B6B"
+
+  graph_home:
+    instruction: "使用 assets 里的毛线素材替换毛线泡泡；灵感节点保持圆角布贴风"
+    node_types:
+      yarn:
+        shape: "image-node (yarn ball PNG)"
+        render:
+          image_source: "choose from yarn_node_assets.*"
+          tint_strategy:
+            enabled: true
+            goal: "根据用户上传的毛线 colors[0] 自动给毛线团着色"
+            method_priority:
+              - "canvas tint multiply + preserve highlights"
+              - "HSL hue-shift (if base is neutral/gray)"
+              - "fallback: draw colored circle behind the yarn image"
+            input_color:
+              from: "Yarn.colors[0]"
+              fallback: "#60a5fa"
+          outline:
+            enabled: true
+            color: "rgba(255,255,255,0.85)"
+            width: 2
+          shadow:
+            enabled: true
+            color: "rgba(0,0,0,0.20)"
+            blur: 12
+            offsetY: 6
+        behavior:
+          hover_preview: true
+          click_to_detail: "/yarns/:id"
+      inspiration:
+        shape: "rounded-rect patch"
+        render:
+          fill_texture: "/textures/felt-cream-1024.png"
+          stroke_color: "rgba(47,95,158,0.95)" # 靛蓝线迹感
+          stroke_width: 2
+          optional_cover_image: true
+        behavior:
+          hover_preview: true
+          click_to_detail: "/inspirations/:id"
+    links:
+      style: "thread line"
+      color: "rgba(47,95,158,0.22)"
+      width: 1
+      curve: "slight"
+    display_rule: "linked-only"
+
+  implementation_notes_for_agent:
+    where_to_apply_textures:
+      - "全局 body 背景：bg-fabric-cream 平铺 + grain-soft 叠加"
+      - "卡片组件 .card：knit-jersey 作为 background-image（低对比）"
+      - "按钮/Tab：felt 作为 background-image + 柔阴影"
+      - "需要针脚效果：stitch-line 作为边框装饰（可用 pseudo-element）"
+    yarn_ball_tinting_guideline:
+      - "优先使用中性灰/米白的毛线团 base 贴图作为着色底"
+      - "Canvas 渲染顺序建议：draw tinted base -> draw original with low alpha highlights -> optional outline"
+      - "若 tint 失败或颜色过深：改为 draw colored circle behind + yarn image 原色"
+    file_expectations:
+      - "textures 纹理为可平铺贴图（seamless），尺寸建议 1024/2048"
+      - "icons 为 192/512 PNG，替换 manifest 即可"
+      - "yarn-balls 素材建议提供：neutral/light/dark 至少一张；最好透明背景 PNG"
+
+  acceptance_criteria:
+    - "PWA 安装后的桌面/主屏图标来自 public/icons（192/512）"
+    - "应用背景、卡片、按钮呈现织物/毛毡纹理（来自 public/textures）"
+    - "首页图谱：毛线节点显示为毛线团素材（非纯色圆点）"
+    - "毛线节点颜色随 Yarn.colors[0] 自动变化（tint 或 fallback 方案可见）"
+```

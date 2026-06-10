@@ -71,9 +71,9 @@ export default function RecommendationPanel({ color, material, weight, tags, col
   ];
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-purple-100 shadow-sm">
-      <h3 className="font-bold text-gray-800 mb-1">🔍 智能推荐</h3>
-      <p className="text-xs text-gray-400 mb-4">根据毛线信息自动搜索：<span className="text-purple-600">{searchQuery || "暂无关键词"}</span></p>
+    <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <h3 className="font-bold text-[#2B2B2B] mb-1">🔍 智能推荐</h3>
+      <p className="text-xs text-[#6B6B6B] mb-4">根据毛线信息自动搜索：<span className="text-[#2B2B2B]">{searchQuery || "暂无关键词"}</span></p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {platforms.map(p => (
           <a
@@ -81,14 +81,14 @@ export default function RecommendationPanel({ color, material, weight, tags, col
             href={p.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border ${p.color} transition text-sm font-medium text-gray-700`}
+            className={`relative overflow-hidden flex items-center gap-2 px-3 py-2.5 rounded-[18px] surface-felt border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition text-sm font-medium text-[#2B2B2B]`}
           >
             <span>{p.icon}</span>
             <span>{p.name}</span>
           </a>
         ))}
       </div>
-      <p className="text-xs text-gray-400 mt-3">
+      <p className="text-xs text-[#6B6B6B] mt-3">
         点击后将在新标签页中打开搜索，可根据实际毛线特征调整关键词
       </p>
     </div>

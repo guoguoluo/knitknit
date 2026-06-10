@@ -31,12 +31,12 @@ export default function DataActions() {
     <div className="flex gap-0.5 items-center shrink-0">
       <button
         onClick={handleExport}
-        className="text-sm text-gray-400 hover:text-purple-600 transition px-1"
+        className="text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition px-1"
         title={texts.exportData}
       >⬇</button>
       <button
         onClick={() => fileRef.current?.click()}
-        className="text-sm text-gray-400 hover:text-purple-600 transition px-1"
+        className="text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition px-1"
         title={texts.importData}
       >⬆</button>
       <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />

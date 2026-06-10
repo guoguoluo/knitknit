@@ -32,6 +32,43 @@ const MIN_R = 12;
 const HEADER_H = 56;
 const TITLE_H = 60;
 const BTN_H = 56;
+const YARN_BALL_SRC = "/knitknit/assets/yarn-cream.png";
+
+function tintYarnBall(color: string, size: number): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      const s = Math.max(size, 16);
+      c.width = s * 2;
+      c.height = s * 2;
+      const ctx = c.getContext("2d")!;
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.globalCompositeOperation = "source-atop";
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 0.35;
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL("image/png"));
+    };
+    img.onerror = () => {
+      const c = document.createElement("canvas");
+      c.width = size * 2;
+      c.height = size * 2;
+      const ctx = c.getContext("2d")!;
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(size, size, size, 0, Math.PI * 2);
+      ctx.fill();
+      resolve(c.toDataURL("image/png"));
+    };
+    img.src = YARN_BALL_SRC;
+  });
+}
 
 function getBubbleRadius(
   item: { type: string; hasYarn?: boolean },
@@ -122,6 +159,7 @@ export default function Home() {
   const panStart = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const pinchRef = useRef<{ dist0: number; scale0: number } | null>(null);
   const animRef = useRef<number>(0);
+  const [tintedUrls, setTintedUrls] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const onResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
@@ -134,6 +172,27 @@ export default function Home() {
     fetchYarns();
     fetchInspirations();
   }, [fetchYarns, fetchInspirations]);
+
+  useEffect(() => {
+    const yarnColors = new Map<string, string>();
+    for (const y of yarns) {
+      const color = y.colors?.[0] || y.color || "#60a5fa";
+      yarnColors.set(`y-${y.id}`, color);
+    }
+    let cancelled = false;
+    void (async () => {
+      const map = new Map(Array.from(tintedUrls.entries()));
+      for (const [key, color] of Array.from(yarnColors)) {
+        if (map.has(key)) continue;
+        const size = Math.max(MAX_R * 2, 96);
+        const url = await tintYarnBall(color, size);
+        if (cancelled) return;
+        map.set(key, url);
+      }
+      setTintedUrls(map);
+    })();
+    return () => { cancelled = true; };
+  }, [yarns]);
 
   useEffect(() => {
     let running = true;
@@ -417,7 +476,7 @@ export default function Home() {
             <div className="text-6xl mb-4 opacity-70">🧶</div>
             <h2 className="text-xl font-bold text-gray-700 mb-2">开始收集灵感吧</h2>
             <p className="text-sm text-gray-400 mb-6 max-w-xs">去小红书、Ravelry 发现好看的毛衣和图解，添加到这里</p>
-            <Link href="/inspirations" className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition">
+            <Link href="/inspirations" className="relative overflow-hidden px-6 py-2.5 rounded-[18px] surface-felt-accent text-white font-semibold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
               + 添加灵感
             </Link>
           </div>
@@ -438,35 +497,29 @@ export default function Home() {
               onPointerDown={onSvgPointerDown}
             >
               <defs>
-                <filter id="ss" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx={0} dy={4} stdDeviation={8} floodColor="rgba(0,0,0,0.15)" />
+                <filter id="yarnShadow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx={0} dy={6} stdDeviation={12} floodColor="rgba(0,0,0,0.2)" />
                 </filter>
-                <filter id="gg" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx={0} dy={2} stdDeviation={4} floodColor="rgba(255,255,255,0.3)" />
+                <filter id="feltShadow" x="-30%" y="-30%" width="160%" height="160%">
+                  <feDropShadow dx={0} dy={4} stdDeviation={8} floodColor="rgba(0,0,0,0.12)" />
                 </filter>
-                <radialGradient id="sh" cx="35%" cy="30%" r="55%">
-                  <stop offset="0%" stopColor="rgba(255,255,255,0.55)" />
-                  <stop offset="60%" stopColor="rgba(255,255,255,0.08)" />
-                  <stop offset="100%" stopColor="rgba(0,0,0,0.06)" />
-                </radialGradient>
-                <radialGradient id="rsh" cx="35%" cy="30%" r="55%">
-                  <stop offset="0%" stopColor="rgba(255,255,255,0.5)" />
-                  <stop offset="60%" stopColor="rgba(255,255,255,0.06)" />
-                  <stop offset="100%" stopColor="rgba(0,0,0,0.04)" />
-                </radialGradient>
-                <linearGradient id="gr" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#e879f9" />
-                  <stop offset="100%" stopColor="#f472b6" />
-                </linearGradient>
+                <filter id="innerHighlight" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx={0} dy={1} stdDeviation={0} floodColor="rgba(255,255,255,0.45)" />
+                </filter>
+                <pattern id="stitchPattern" patternUnits="userSpaceOnUse" width={8} height={8}>
+                  <rect width={8} height={8} fill="none" stroke="rgba(47,95,158,0.35)" strokeWidth={1.5} strokeDasharray="3 3" />
+                </pattern>
               </defs>
 
 
 
               {linkLines.map((line, idx) => (
-                <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="#c084fc" strokeWidth={2} strokeOpacity={0.5} strokeDasharray="4 3" />
+                <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="rgba(47,95,158,0.22)" strokeWidth={1.5} />
               ))}
 
-              {bubbles.map((b) => (
+              {bubbles.map((b) => {
+                const tintedUrl = tintedUrls.get(b.id);
+                return (
                 <g
                   key={b.id}
                   className="cursor-pointer"
@@ -478,43 +531,51 @@ export default function Home() {
                 >
                   {b.type === "yarn" ? (
                     <>
-                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color} fillOpacity={0.7} stroke="rgba(255,255,255,0.7)" strokeWidth={2.5} filter="url(#ss)" />
-                      {hoveredId === b.id && b.image ? (
+                      {tintedUrl ? (
                         <>
                           <clipPath id={`cy-${b.id}`}><circle cx={b.baseX} cy={b.baseY} r={b.r} /></clipPath>
-                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} />
+                          <image href={tintedUrl} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} filter="url(#yarnShadow)" />
                         </>
-                      ) : showBubbleText ? (
-                        <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.4)} textAnchor="middle" fill="white" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+                      ) : (
+                        <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} filter="url(#yarnShadow)" />
+                      )}
+                      {hoveredId === b.id && b.image ? (
+                        <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={0.85} />
+                      ) : null}
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={2} />
+                      {showBubbleText && (
+                        <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.4)} textAnchor="middle" fill="#2B2B2B" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 1px rgba(255,255,255,0.5)" }}>
                           {b.label.length > 8 ? b.label.slice(0, 7) + "…" : b.label}
                         </text>
-                      ) : null}
-                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="url(#sh)" filter="url(#gg)" />
+                      )}
                     </>
                   ) : (
                     <>
-                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(4, Math.round(r * 0.3))} fill="url(#gr)" stroke="rgba(255,255,255,0.7)" strokeWidth={2.5} filter="url(#ss)" />
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} fill="#f5efe6" filter="url(#feltShadow)" />
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} fill="none" stroke="rgba(47,95,158,0.4)" strokeWidth={2} strokeDasharray="4 3" />
                       {hoveredId === b.id && b.image ? (
                         <>
-                          <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(4, Math.round(r * 0.3))} /></clipPath>
-                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} />
+                          <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} /></clipPath>
+                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={0.85} />
                         </>
-                      ) : showBubbleText ? (
-                        <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.4)} textAnchor="middle" fill="white" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 3px rgba(0,0,0,0.5)" }}>
+                      ) : null}
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} />
+                      {showBubbleText && (
+                        <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.35)} textAnchor="middle" fill="#2B2B2B" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 1px rgba(255,255,255,0.5)" }}>
                           {b.label.length > 8 ? b.label.slice(0, 7) + "…" : b.label}
                         </text>
-                      ) : null}
-                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(4, Math.round(r * 0.3))} fill="url(#rsh)" filter="url(#gg)" />
+                      )}
                     </>
                   )}
                 </g>
-              ))}
+                );
+              })}
             </svg>
           </div>
         )}
 
         {hoveredBubble && (
-          <div className="fixed z-50 bg-white/95 backdrop-blur rounded-xl shadow-xl border border-gray-100 px-3 py-2 pointer-events-none" style={{
+          <div className="fixed z-50 surface-felt rounded-[16px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.2)] px-3 py-2 pointer-events-none" style={{
             left: Math.min(mousePos.x + 14, window.innerWidth - 160),
             top: Math.max(mousePos.y - 50, 8),
           }}>
@@ -527,9 +588,9 @@ export default function Home() {
               ) : (
                 <span className="text-sm">💡</span>
               )}
-              <span className="text-sm font-medium text-gray-800 truncate">{hoveredBubble.label}</span>
+              <span className="text-sm font-medium text-[#2B2B2B] truncate">{hoveredBubble.label}</span>
             </div>
-            <div className="text-[10px] text-gray-400 mt-0.5">
+            <div className="text-[10px] text-[#6B6B6B] mt-0.5">
               {hoveredBubble.type === "yarn" ? texts.homeYarnTooltip : texts.homeInspTooltip}
             </div>
           </div>
@@ -539,10 +600,10 @@ export default function Home() {
       {/* action buttons */}
       <section className="text-center shrink-0 pb-4 pt-0">
         <div className="flex justify-center gap-3">
-          <Link href="/yarns" className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold text-sm shadow-lg hover:shadow-xl transition">
+          <Link href="/yarns" className="relative overflow-hidden px-5 py-2.5 rounded-[18px] surface-felt-accent text-white font-semibold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
             {texts.homeManageYarns}
           </Link>
-          <Link href="/inspirations" className="px-5 py-2.5 rounded-xl bg-white text-purple-600 font-semibold text-sm border border-purple-200 shadow hover:shadow-lg transition">
+          <Link href="/inspirations" className="relative overflow-hidden px-5 py-2.5 rounded-[18px] surface-felt text-[#2B2B2B] font-semibold text-sm shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition border border-[rgba(47,95,158,0.25)]">
             {texts.homeBrowseInspirations}
           </Link>
         </div>
