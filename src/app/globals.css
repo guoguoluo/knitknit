@@ -19,35 +19,30 @@
     background-color: #F8EFDF;
   }
   .btnPatch {
-    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     height: 56px;
-    padding: 0 20px;
+    padding: 0 24px;
     font-weight: 800;
     border: 0;
     border-radius: 999px;
     appearance: none;
-    background: none;
     box-shadow: none;
     cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: auto 56px;
     text-align: center;
     line-height: 1.2;
     overflow: hidden;
   }
   .btnPatch--white {
-    background:
-      url("/knitknit/texture/btn_white_left.png") no-repeat left center / 56px 56px,
-      url("/knitknit/texture/btn_white_right.png") no-repeat right center / 56px 56px,
-      url("/knitknit/texture/btn_white_mid.png") repeat-x 56px center / 50px 56px;
+    background-image: url("/knitknit/texture/btn_white.png");
     color: #2b2b2b;
   }
   .btnPatch--coffee {
-    background:
-      url("/knitknit/texture/btn_coffee_left.png") no-repeat left center / 56px 56px,
-      url("/knitknit/texture/btn_coffee_right.png") no-repeat right center / 56px 56px,
-      url("/knitknit/texture/btn_coffee_mid.png") repeat-x 56px center / 50px 56px;
+    background-image: url("/knitknit/texture/btn_coffee.png");
     color: #f4f1ea;
   }
   .stitch-border-b {
