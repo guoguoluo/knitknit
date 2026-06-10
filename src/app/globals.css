@@ -30,4 +30,7 @@
     border: 2px dashed rgba(47,95,158,0.45);
     color: #464646;
   }
+  .stitch-border-b {
+    border-bottom: 2px dashed rgba(47,95,158,0.35);
+  }
 }
