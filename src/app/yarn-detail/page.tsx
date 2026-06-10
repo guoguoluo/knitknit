@@ -57,7 +57,7 @@ function YarnDetailContent() {
             </div>
             {yarn.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-3">
-                {yarn.tags.map(t => <span key={t} className="px-2 py-0.5 surface-felt text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>)}
+                {yarn.tags.map(t => <span key={t} className="px-2 py-0.5 bg-white/60 text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>)}
               </div>
             )}
             {yarn.notes && <p className="mt-3 text-sm text-[#6B6B6B]">{yarn.notes}</p>}
@@ -72,11 +72,11 @@ function YarnDetailContent() {
       <RecommendationPanel color={yarn.color} material={yarn.material} weight={yarn.weight} tags={yarn.tags} colors={yarn.colors} />
 
       {relatedInspirations.length > 0 && (
-        <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="bg-[#FFFAF1] rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRelatedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {relatedInspirations.map(insp => (
-              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-[16px] surface-felt border border-[rgba(47,95,158,0.15)] hover:shadow-lg transition">
+              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-[16px] bg-[#FFFAF1] border border-[rgba(47,95,158,0.15)] hover:shadow-lg transition">
                 <div className="font-medium text-sm text-[#2B2B2B]">{insp.title}</div>
                 <div className="text-xs text-[#6B6B6B] mt-1">{insp.platform}</div>
               </Link>
@@ -86,14 +86,14 @@ function YarnDetailContent() {
       )}
 
       {matchedInspirations.length > 0 && (
-        <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="bg-[#FFFAF1] rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRecommendedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {matchedInspirations.map(insp => (
-              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-[16px] surface-felt border border-[rgba(47,95,158,0.15)] hover:shadow-lg transition">
+              <Link href={`/inspiration-detail?id=${insp.id}`} key={insp.id} className="p-3 rounded-[16px] bg-[#FFFAF1] border border-[rgba(47,95,158,0.15)] hover:shadow-lg transition">
                 <div className="font-medium text-sm text-[#2B2B2B]">{insp.title}</div>
                 <div className="flex gap-1 mt-1">
-                  {insp.tags.slice(0, 3).map(t => <span key={t} className="px-1.5 py-0.5 surface-felt text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>)}
+                  {insp.tags.slice(0, 3).map(t => <span key={t} className="px-1.5 py-0.5 bg-white/60 text-[#2B2B2B] text-xs rounded-full border border-[rgba(47,95,158,0.2)]">{t}</span>)}
                 </div>
               </Link>
             ))}

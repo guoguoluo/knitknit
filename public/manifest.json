@@ -2,27 +2,27 @@
   "name": "Knit",
   "short_name": "Knit",
   "description": "管理你的毛线库存，收集编织灵感",
-  "start_url": ".",
+  "start_url": "/knitknit/",
   "display": "standalone",
-  "background_color": "#9333EA",
-  "theme_color": "#9333EA",
+  "background_color": "#F8EFDF",
+  "theme_color": "#F8EFDF",
   "icons": [
     {
-      "src": "icons/icon-192x192.png",
+      "src": "/knitknit/icons/icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icons/icon-512x512.png",
+      "src": "/knitknit/icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     },
     {
-      "src": "icons/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/knitknit/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
     }
   ],

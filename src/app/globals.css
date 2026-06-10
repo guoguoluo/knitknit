@@ -23,16 +23,22 @@
   .card-yarn {
     background-color: #E9E3D7;
   }
-  .btn-white {
-    background-image: url("/knitknit/texture/btn_white.png");
-    background-repeat: repeat;
+  .card-insp {
+    background-color: #FFFAF1;
   }
-  .btn-coffee {
-    background-image: url("/knitknit/texture/btn_coffee.png");
-    background-repeat: repeat;
+  .bubble-bg {
+    background-color: #F8EFDF;
   }
-  .felt-texture {
+  .btn-felt {
     background-image: url("/knitknit/texture/felt-cream-1024.png");
     background-repeat: repeat;
+    border: 2px dashed rgba(47,95,158,0.45);
+    color: #464646;
+  }
+  .btn-grain {
+    background-image: url("/knitknit/texture/grain-soft-1024.png");
+    background-repeat: repeat;
+    border: 2px dashed rgba(47,95,158,0.45);
+    color: #464646;
   }
 }

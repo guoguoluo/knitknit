@@ -90,7 +90,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
+      <div className="bg-[#FFFAF1] rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-[#2B2B2B]">{initial ? "编辑灵感" : "添加灵感"}</h2>
           <button onClick={onClose} className="text-[#6B6B6B] hover:text-[#2B2B2B] text-xl">&times;</button>
@@ -170,7 +170,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
             )}
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="inline-block flex-1 px-4 py-2 rounded-[18px] btn-coffee text-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+            <button type="submit" className="inline-block flex-1 px-4 py-2 rounded-[18px] btn-grain font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
               {initial ? "保存" : "添加"}
             </button>
             <button type="button" onClick={onClose} className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
