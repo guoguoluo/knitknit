@@ -29,6 +29,11 @@
     background-size: 100% 100%;
     box-shadow: none;
     font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
   }
   .btnPatch--white {
     background-image: url("/assets/ui/btn_white.png");
