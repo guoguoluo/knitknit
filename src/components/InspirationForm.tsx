@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef } from "react";
 import { useInspirationStore, useYarnStore } from "@/lib/store";
-import { cleanUrl, scrapeUrl, type ScrapeResult } from "@/lib/scrape";
+import { cleanUrl, scrapeUrl } from "@/lib/scrape";
 
 interface Props {
   onClose: () => void;
@@ -23,7 +23,6 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const [patternUploading, setPatternUploading] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState("");
-  const [scrapePageUrl, setScrapePageUrl] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -56,19 +55,12 @@ export default function InspirationForm({ onClose, initial }: Props) {
     abortRef.current = controller;
     setScraping(true);
     setScrapeError("");
-    setScrapePageUrl("");
     try {
       const data = await scrapeUrl(value, controller.signal);
       if (data.title) setTitle(data.title);
       if (data.platform) setPlatform(data.platform);
-      if (data.images?.length > 0) {
-        setImage(data.images[0]);
-      } else if (data.partial && data.pageUrl) {
-        setScrapePageUrl(data.pageUrl);
-        setScrapeError("已识别平台，封面图无法自动抓取，请打开页面手动保存图片后上传");
-      } else {
-        setScrapeError("未能自动抓取到封面图片，可手动上传");
-      }
+      if (data.images?.length > 0) setImage(data.images[0]);
+      else setScrapeError("未能自动抓取到封面图片，可手动上传");
     } catch {
       if (!controller.signal.aborted) setScrapeError("抓取失败，可手动填写");
     }
@@ -147,16 +139,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
             </label>
             <input type="file" accept="image/*" onChange={handleImage} className="text-sm" />
             {uploading && <span className="text-xs text-[#6B6B6B] ml-2">上传中...</span>}
-            {scrapeError && !image && (
-              <p className="text-xs text-amber-600 mt-1">
-                {scrapeError}
-                {scrapePageUrl && (
-                  <a href={scrapePageUrl} target="_blank" rel="noopener noreferrer" className="ml-1 underline text-blue-600 hover:text-blue-800">
-                    打开页面获取封面图
-                  </a>
-                )}
-              </p>
-            )}
+            {scrapeError && !image && <p className="text-xs text-amber-600 mt-1">{scrapeError}</p>}
             {image && (
               <div className="mt-2 flex gap-2 items-start">
                 <img src={image} alt="preview" className="w-20 h-20 object-cover rounded-[16px]"
