@@ -25,7 +25,7 @@ export default function YarnsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#2B2B2B]">{texts.yarnListHeading}</h1>
-        <button onClick={() => setShowForm(true)} className="inline-block px-4 py-2 rounded-[18px] btn-felt font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+        <button onClick={() => setShowForm(true)} className="inline-block px-4 py-2 rounded-[18px] btn-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
           {texts.yarnListAdd}
         </button>
       </div>

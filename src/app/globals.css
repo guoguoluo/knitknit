@@ -18,17 +18,15 @@
   .bubble-bg {
     background-color: #F8EFDF;
   }
-  .btn-felt {
-    background-image: url("/knitknit/texture/felt-cream-1024.png");
+  .btn-white {
+    background-image: url("/knitknit/texture/btn_white.png");
     background-repeat: repeat;
-    border: 2px dashed rgba(47,95,158,0.45);
     color: #464646;
   }
-  .btn-grain {
-    background-image: url("/knitknit/texture/grain-soft-1024.png");
+  .btn-coffee {
+    background-image: url("/knitknit/texture/btn_coffee.png");
     background-repeat: repeat;
-    border: 2px dashed rgba(47,95,158,0.45);
-    color: #464646;
+    color: #fff;
   }
   .stitch-border-b {
     border-bottom: 2px dashed rgba(47,95,158,0.35);
