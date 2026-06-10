@@ -1,17 +1,35 @@
 {
-  "name": "Knit",
-  "short_name": "Knit",
+  "name": "毛线宇宙",
+  "short_name": "毛线宇宙",
   "description": "管理你的毛线库存，收集编织灵感",
-  "start_url": ".",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#F8EFDF",
   "theme_color": "#F8EFDF",
   "icons": [
     {
-      "src": "icons/icon-512x512.png",
+      "src": "./icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./icons/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "categories": ["lifestyle", "shopping"],
