@@ -36,11 +36,11 @@
     line-height: 1.2;
   }
   .btnPatch--white {
-    background-image: url("/assets/ui/btn_white.png");
+    background-image: url("/knitknit/assets/ui/btn_white.png");
     color: #2b2b2b;
   }
   .btnPatch--coffee {
-    background-image: url("/assets/ui/btn_coffee.png");
+    background-image: url("/knitknit/assets/ui/btn_coffee.png");
     color: #f4f1ea;
   }
   .stitch-border-b {
