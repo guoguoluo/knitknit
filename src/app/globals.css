@@ -19,35 +19,35 @@
     background-color: #F8EFDF;
   }
   .btnPatch {
-    appearance: none;
-    border: none;
-    border-style: solid;
-    border-color: transparent;
-    padding: 14px 22px;
-    min-height: 52px;
-    font-weight: 800;
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    line-height: 1.2;
+    height: 56px;
+    padding: 0 20px;
+    font-weight: 800;
+    border: 0;
+    border-radius: 999px;
+    appearance: none;
     background: none;
-    background-color: transparent;
     box-shadow: none;
     cursor: pointer;
+    text-align: center;
+    line-height: 1.2;
+    overflow: hidden;
   }
   .btnPatch--white {
-    border-image-source: url("/knitknit/texture/btn_white.png");
-    border-image-slice: 30 50 fill;
-    border-image-width: 30px 50px;
-    border-image-repeat: stretch;
+    background:
+      url("/knitknit/texture/btn_white_left.png") no-repeat left center / 56px 56px,
+      url("/knitknit/texture/btn_white_right.png") no-repeat right center / 56px 56px,
+      url("/knitknit/texture/btn_white_mid.png") repeat-x 56px center / 50px 56px;
     color: #2b2b2b;
   }
   .btnPatch--coffee {
-    border-image-source: url("/knitknit/texture/btn_coffee.png");
-    border-image-slice: 30 50 fill;
-    border-image-width: 30px 50px;
-    border-image-repeat: stretch;
+    background:
+      url("/knitknit/texture/btn_coffee_left.png") no-repeat left center / 56px 56px,
+      url("/knitknit/texture/btn_coffee_right.png") no-repeat right center / 56px 56px,
+      url("/knitknit/texture/btn_coffee_mid.png") repeat-x 56px center / 50px 56px;
     color: #f4f1ea;
   }
   .stitch-border-b {
