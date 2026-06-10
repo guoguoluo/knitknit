@@ -34,7 +34,7 @@ function InspirationDetailContent() {
     <div className="max-w-3xl mx-auto space-y-6">
       <button onClick={() => router.back()} className="relative overflow-hidden px-3 py-1.5 rounded-[18px] surface-felt text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.inspBack}</button>
 
-      <div className="relative overflow-hidden card-knit rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="card-grain rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
           {insp.image ? (
             <img src={insp.image} alt={insp.title} className="w-full sm:w-40 h-40 object-cover rounded-[16px]" referrerPolicy="no-referrer" />
@@ -90,7 +90,7 @@ function InspirationDetailContent() {
         </div>
       </div>
 
-      <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <h3 className="font-bold text-[#2B2B2B] mb-3">🔄 相关灵感和推荐搜索</h3>
         <div className="flex flex-wrap gap-2">
           <a
@@ -118,7 +118,7 @@ function InspirationDetailContent() {
       </div>
 
       {relatedYarn && (
-        <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">🧶 关联的毛线</h3>
           <div className="flex items-center gap-4">
             {relatedYarn.photo && <img src={relatedYarn.photo} alt={relatedYarn.name} className="w-16 h-16 object-cover rounded-[16px]" />}

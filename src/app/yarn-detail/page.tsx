@@ -36,7 +36,7 @@ function YarnDetailContent() {
     <div className="max-w-3xl mx-auto space-y-6">
       <button onClick={() => router.back()} className="relative overflow-hidden px-3 py-1.5 rounded-[18px] surface-felt text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnBack}</button>
 
-      <div className="relative overflow-hidden card-knit rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="card-yarn rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
           {yarn.photo ? (
             <img src={yarn.photo} alt={yarn.name} className="w-full sm:w-40 h-40 object-cover rounded-[16px]" />
@@ -72,7 +72,7 @@ function YarnDetailContent() {
       <RecommendationPanel color={yarn.color} material={yarn.material} weight={yarn.weight} tags={yarn.tags} colors={yarn.colors} />
 
       {relatedInspirations.length > 0 && (
-        <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRelatedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {relatedInspirations.map(insp => (
@@ -86,7 +86,7 @@ function YarnDetailContent() {
       )}
 
       {matchedInspirations.length > 0 && (
-        <div className="relative overflow-hidden card-knit rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRecommendedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {matchedInspirations.map(insp => (

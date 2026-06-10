@@ -25,7 +25,7 @@ export default function YarnsPage() {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-[#2B2B2B]">{texts.yarnListHeading}</h1>
-        <button onClick={() => setShowForm(true)} className="relative overflow-hidden px-4 py-2 rounded-[18px] surface-felt-accent text-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+        <button onClick={() => setShowForm(true)} className="inline-block px-4 py-2 rounded-[18px] btn-white text-[#464646] font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
           {texts.yarnListAdd}
         </button>
       </div>
@@ -58,7 +58,7 @@ export default function YarnsPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {filtered.map(yarn => (
             <Link href={`/yarn-detail?id=${yarn.id}`} key={yarn.id}>
-              <div className="relative overflow-hidden card-knit rounded-[16px] p-4 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition cursor-pointer group">
+              <div className="card-yarn rounded-[16px] p-4 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition cursor-pointer group">
                 {yarn.photo ? (
                   <img src={yarn.photo} alt={yarn.name} className="w-full h-40 object-cover rounded-[16px] mb-3" />
                 ) : (

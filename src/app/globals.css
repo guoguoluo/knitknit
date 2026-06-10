@@ -20,59 +20,19 @@
     opacity: 0.18;
     pointer-events: none;
   }
-  .card-knit {
-    background-image: url("/knitknit/texture/knit-jersey-beige-1024.png");
-    background-repeat: repeat;
+  .card-yarn {
+    background-color: #E9E3D7;
   }
-  .card-knit::after {
-    content: "";
-    position: absolute;
-    inset: 0;
+  .card-grain {
     background-image: url("/knitknit/texture/grain-soft-1024.png");
     background-repeat: repeat;
-    background-blend-mode: multiply;
-    opacity: 0.10;
-    pointer-events: none;
-    border-radius: inherit;
   }
-  .surface-felt {
-    background-image: url("/knitknit/texture/felt-cream-1024.png");
+  .btn-white {
+    background-image: url("/knitknit/texture/btn_white.png");
     background-repeat: repeat;
   }
-  .surface-felt::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("/knitknit/texture/grain-soft-1024.png");
+  .btn-coffee {
+    background-image: url("/knitknit/texture/btn_coffee.png");
     background-repeat: repeat;
-    background-blend-mode: multiply;
-    opacity: 0.12;
-    pointer-events: none;
-    border-radius: inherit;
-  }
-  .surface-felt-accent {
-    background-image: url("/knitknit/texture/felt-pink-1024.png");
-    background-repeat: repeat;
-  }
-  .surface-felt-accent::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background-image: url("/knitknit/texture/grain-soft-1024.png");
-    background-repeat: repeat;
-    background-blend-mode: multiply;
-    opacity: 0.10;
-    pointer-events: none;
-    border-radius: inherit;
-  }
-  .stitch-border {
-    border-style: solid;
-    border-image: url("/knitknit/texture/stitch-line-indigo.png") 6 round;
-    border-width: 2px;
-  }
-  .stitch-border-b {
-    border-bottom-style: solid;
-    border-image: url("/knitknit/texture/stitch-line-indigo.png") 6 round;
-    border-bottom-width: 2px;
   }
 }

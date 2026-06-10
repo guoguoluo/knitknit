@@ -90,7 +90,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="relative overflow-hidden card-knit rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
+      <div className="card-grain rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-[#2B2B2B]">{initial ? "编辑灵感" : "添加灵感"}</h2>
           <button onClick={onClose} className="text-[#6B6B6B] hover:text-[#2B2B2B] text-xl">&times;</button>
