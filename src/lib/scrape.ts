@@ -1,3 +1,5 @@
+const PROXY_TIMEOUT = 8000;
+
 const CORS_PROXIES = [
   (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   (u: string) => `https://corsproxy.io/?url=${encodeURIComponent(u)}`,
@@ -12,9 +14,7 @@ const SITE_SUFFIXES = [
 ];
 
 export function cleanUrl(text: string): string {
-  // Remove leading Chinese characters and spaces
   let s = text.replace(/^[\u4e00-\u9fff\s]+/, "").trim();
-  // Extract the first http:// or https:// URL
   const m = s.match(/https?:\/\/[^\s\u4e00-\u9fff]+/);
   return m ? m[0] : s;
 }
@@ -50,17 +50,14 @@ function parseHtmlForData(html: string, url: string): { title: string; images: s
 
   const platform = detectPlatform(url);
 
-  // og:image via regex
   const ogImg = html.match(/<meta\s+[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
   if (ogImg) addImage(ogImg[1]);
   const ogImg2 = html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:image["'][^>]*\/?>/i);
   if (ogImg2) addImage(ogImg2[1]);
 
-  // twitter:image
   const twImg = html.match(/<meta\s+[^>]*name=["']twitter:image["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
   if (twImg) addImage(twImg[1]);
 
-  // Xiaohongshu: __INITIAL_STATE__
   if (platform === "小红书") {
     const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({[\s\S]+?});/);
     if (stateMatch) {
@@ -74,14 +71,12 @@ function parseHtmlForData(html: string, url: string): { title: string; images: s
         }
       } catch {}
     }
-    // XHS CDN URLs
     const xhsUrls = html.match(/https?:\/\/sns-webpic-qc\.xhscdn\.com\/[^"'\s]+/gi);
     if (xhsUrls) for (const u of xhsUrls) addImage(u);
     const ciUrls = html.match(/https?:\/\/ci\.xhscdn\.com\/[^"'\s]+(?:jpe?g|png|webp)[^"'\s]*/gi);
     if (ciUrls) for (const u of ciUrls) addImage(u);
   }
 
-  // JSON-LD
   const ldMatch = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/i);
   if (ldMatch) {
     try {
@@ -98,7 +93,6 @@ function parseHtmlForData(html: string, url: string): { title: string; images: s
     } catch {}
   }
 
-  // First <img> tag with reasonable size
   if (images.length === 0) {
     const imgRe = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
     let m;
@@ -111,28 +105,23 @@ function parseHtmlForData(html: string, url: string): { title: string; images: s
     }
   }
 
-  // Title
   let title = "";
 
-  // og:title
   const ogTitle = html.match(/<meta\s+[^>]*property=["']og:title["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
   if (ogTitle) title = ogTitle[1];
   const ogTitle2 = html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*property=["']og:title["'][^>]*\/?>/i);
   if (!title && ogTitle2) title = ogTitle2[1];
 
-  // twitter:title
   if (!title) {
     const twTitle = html.match(/<meta\s+[^>]*name=["']twitter:title["'][^>]*content=["']([^"']+)["'][^>]*\/?>/i);
     if (twTitle) title = twTitle[1];
   }
 
-  // <h1>
   if (!title) {
     const h1 = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
     if (h1) title = h1[1].replace(/<[^>]+>/g, "").trim();
   }
 
-  // <title> with cleanup
   if (!title) {
     const tMatch = html.match(/<title>([\s\S]*?)<\/title>/i);
     if (tMatch) {
@@ -146,7 +135,6 @@ function parseHtmlForData(html: string, url: string): { title: string; images: s
     }
   }
 
-  // From URL path
   if (!title) {
     try {
       const path = decodeURIComponent(new URL(url).pathname.replace(/\/$/, "").split("/").pop() || "");
@@ -157,31 +145,40 @@ function parseHtmlForData(html: string, url: string): { title: string; images: s
   return { title, images: images.slice(0, 5), platform: platform || "" };
 }
 
+async function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<string | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT);
+  const combinedSignal = signal ?? controller.signal;
+
+  const onParentAbort = signal ? () => controller.abort() : undefined;
+  if (onParentAbort) signal!.addEventListener("abort", onParentAbort, { once: true });
+
+  try {
+    const res = await fetch(proxyUrl, { signal: combinedSignal, cache: "no-cache" });
+    if (!res.ok) return null;
+
+    const ct = res.headers.get("content-type") || "";
+    if (ct.includes("json") || proxyUrl.includes("/get?")) {
+      const json = await res.json();
+      return typeof json === "string" ? json : json.contents || json.body || "";
+    }
+    return await res.text();
+  } finally {
+    clearTimeout(timeoutId);
+    if (onParentAbort) signal?.removeEventListener("abort", onParentAbort);
+  }
+}
+
 export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<{ title: string; images: string[]; platform: string }> {
   const platform = detectPlatform(url);
 
   for (const proxyFn of CORS_PROXIES) {
-    try {
-      const proxyUrl = proxyFn(url);
-      const res = await fetch(proxyUrl, { signal, cache: "no-cache" });
-      if (!res.ok) continue;
-
-      let html: string;
-      const ct = res.headers.get("content-type") || "";
-      if (ct.includes("json") || proxyUrl.includes("/get?")) {
-        const json = await res.json();
-        html = typeof json === "string" ? json : json.contents || json.body || "";
-      } else {
-        html = await res.text();
-      }
-
-      if (html && html.length > 100) {
-        const result = parseHtmlForData(html, url);
-        if (result.title || result.images.length > 0) return result;
-      }
-    } catch {}
+    const html = await fetchViaProxy(proxyFn(url), signal);
+    if (html && html.length > 100) {
+      const result = parseHtmlForData(html, url);
+      if (result.title || result.images.length > 0) return result;
+    }
   }
 
-  // Fallback: try with fetch + no-cors (will not get body, but just return platform)
   return { title: "", images: [], platform };
 }

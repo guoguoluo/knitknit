@@ -23,7 +23,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const [patternUploading, setPatternUploading] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState("");
-  const scrapeTimer = useRef<ReturnType<typeof setTimeout>>();
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -50,27 +50,33 @@ export default function InspirationForm({ onClose, initial }: Props) {
   };
 
   const doScrape = async (value: string) => {
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
     setScraping(true);
     setScrapeError("");
     try {
-      const data = await scrapeUrl(value);
+      const data = await scrapeUrl(value, controller.signal);
       if (data.title) setTitle(data.title);
       if (data.platform) setPlatform(data.platform);
       if (data.images?.length > 0) setImage(data.images[0]);
       else setScrapeError("未能自动抓取到封面图片，可手动上传");
     } catch {
-      setScrapeError("抓取失败，可手动填写");
+      if (!controller.signal.aborted) setScrapeError("抓取失败，可手动填写");
     }
     setScraping(false);
+    if (abortRef.current === controller) abortRef.current = null;
   };
 
   const handleUrlChange = (value: string) => {
-    const cleaned = cleanUrl(value);
-    setUrl(cleaned);
+    setUrl(cleanUrl(value));
+  };
+
+  const handleScrapeClick = () => {
+    const cleaned = cleanUrl(url);
     if (!cleaned.startsWith("http")) return;
-    if (initial && initial.image) return;
-    if (scrapeTimer.current) clearTimeout(scrapeTimer.current);
-    scrapeTimer.current = setTimeout(() => doScrape(cleaned), 800);
+    setUrl(cleaned);
+    doScrape(cleaned);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,8 +104,15 @@ export default function InspirationForm({ onClose, initial }: Props) {
         <form onSubmit={handleSubmit} className="space-y-3">
           <input required placeholder="标题 *" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={title} onChange={e => setTitle(e.target.value)} />
           <div className="relative">
-            <input placeholder="链接 URL（粘贴后自动抓取信息）" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none pr-8 text-[#2B2B2B]" value={url} onChange={e => handleUrlChange(e.target.value)} />
-            {scraping && <span className="absolute right-3 top-2.5 text-xs text-[#6B6B6B] animate-pulse">抓取中...</span>}
+            <div className="flex gap-2">
+              <input placeholder="链接 URL" className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={url} onChange={e => handleUrlChange(e.target.value)} />
+              {url.startsWith("http") && !initial && (
+                <button type="button" onClick={handleScrapeClick} disabled={scraping}
+                  className="shrink-0 px-3 py-2 rounded-[16px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition text-sm disabled:opacity-50">
+                  {scraping ? "抓取中..." : "抓取信息"}
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex gap-3">
             <select className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 text-[#2B2B2B]" value={platform} onChange={e => setPlatform(e.target.value)}>
@@ -132,7 +145,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
                 <img src={image} alt="preview" className="w-20 h-20 object-cover rounded-[16px]"
                   onError={(e) => { e.currentTarget.style.display = "none"; setScrapeError("图片加载失败，可重新抓取或手动上传"); }} />
                 {url && (
-                  <button type="button" onClick={() => doScrape(url)} className="text-xs text-[#6B6B6B] hover:text-[#2B2B2B] underline">
+                  <button type="button" onClick={handleScrapeClick} className="text-xs text-[#6B6B6B] hover:text-[#2B2B2B] underline">
                     重新抓取
                   </button>
                 )}
