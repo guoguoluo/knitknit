@@ -32,9 +32,9 @@ function InspirationDetailContent() {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-3xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="relative overflow-hidden px-3 py-1.5 rounded-[18px] surface-felt text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.inspBack}</button>
+      <button onClick={() => router.back()} className="inline-block px-3 py-1.5 rounded-[18px] bg-white text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.inspBack}</button>
 
-      <div className="card-grain rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="bg-white rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
           {insp.image ? (
             <img src={insp.image} alt={insp.title} className="w-full sm:w-40 h-40 object-cover rounded-[16px]" referrerPolicy="no-referrer" />
@@ -48,7 +48,7 @@ function InspirationDetailContent() {
                 <span className="px-3 py-1 rounded-full text-sm bg-white/60 text-[#6B6B6B]">{insp.platform}</span>
               )}
               {relatedYarn && (
-                <Link href={`/yarn-detail?id=${relatedYarn.id}`} className="px-3 py-1 rounded-full text-sm surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
+                <Link href={`/yarn-detail?id=${relatedYarn.id}`} className="px-3 py-1 rounded-full text-sm bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
                   🧶 {relatedYarn.name}
                 </Link>
               )}
@@ -79,38 +79,38 @@ function InspirationDetailContent() {
             )}
             <div className="flex gap-2 mt-4">
               {insp.url && (
-                <a href={insp.url} target="_blank" rel="noopener noreferrer" className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt-accent text-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+                <a href={insp.url} target="_blank" rel="noopener noreferrer" className="inline-block px-3 py-1.5 text-sm rounded-[18px] btn-coffee text-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
                   {texts.inspViewOriginal}
                 </a>
               )}
-              <button onClick={() => setShowEdit(true)} className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">编辑</button>
-              <button onClick={handleDelete} className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-red-600 border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">删除</button>
+              <button onClick={() => setShowEdit(true)} className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">编辑</button>
+              <button onClick={handleDelete} className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-red-600 border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">删除</button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+      <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <h3 className="font-bold text-[#2B2B2B] mb-3">🔄 相关灵感和推荐搜索</h3>
         <div className="flex flex-wrap gap-2">
           <a
             href={`https://www.xiaohongshu.com/search_result?keyword=${encodeURIComponent(insp.title)}&type=1`}
             target="_blank" rel="noopener noreferrer"
-            className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition"
+            className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition"
           >
             📕 小红书搜同款
           </a>
           <a
             href={`https://www.ravelry.com/patterns/search#search=${encodeURIComponent(insp.title)}&view=captioned_grid&sort=best`}
             target="_blank" rel="noopener noreferrer"
-            className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition"
+            className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition"
           >
             🧶 Ravelry搜同款
           </a>
           <a
             href={`https://www.instagram.com/explore/tags/${encodeURIComponent(insp.title.replace(/\s+/g, ""))}/`}
             target="_blank" rel="noopener noreferrer"
-            className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition"
+            className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition"
           >
             📸 Instagram搜同款
           </a>
@@ -118,7 +118,7 @@ function InspirationDetailContent() {
       </div>
 
       {relatedYarn && (
-        <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">🧶 关联的毛线</h3>
           <div className="flex items-center gap-4">
             {relatedYarn.photo && <img src={relatedYarn.photo} alt={relatedYarn.name} className="w-16 h-16 object-cover rounded-[16px]" />}

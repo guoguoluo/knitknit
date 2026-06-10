@@ -23,16 +23,16 @@
   .card-yarn {
     background-color: #E9E3D7;
   }
-  .card-grain {
-    background-image: url("/knitknit/texture/grain-soft-1024.png");
-    background-repeat: repeat;
-  }
   .btn-white {
     background-image: url("/knitknit/texture/btn_white.png");
     background-repeat: repeat;
   }
   .btn-coffee {
     background-image: url("/knitknit/texture/btn_coffee.png");
+    background-repeat: repeat;
+  }
+  .felt-texture {
+    background-image: url("/knitknit/texture/felt-cream-1024.png");
     background-repeat: repeat;
   }
 }

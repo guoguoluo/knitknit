@@ -32,43 +32,6 @@ const MIN_R = 12;
 const HEADER_H = 56;
 const TITLE_H = 60;
 const BTN_H = 56;
-const YARN_BALL_SRC = "/knitknit/assets/yarn-cream.png";
-
-function tintYarnBall(color: string, size: number): Promise<string> {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      const c = document.createElement("canvas");
-      const s = Math.max(size, 16);
-      c.width = s * 2;
-      c.height = s * 2;
-      const ctx = c.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      ctx.globalCompositeOperation = "multiply";
-      ctx.fillStyle = color;
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.globalCompositeOperation = "source-atop";
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      ctx.globalCompositeOperation = "source-over";
-      ctx.globalAlpha = 0.35;
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      resolve(c.toDataURL("image/png"));
-    };
-    img.onerror = () => {
-      const c = document.createElement("canvas");
-      c.width = size * 2;
-      c.height = size * 2;
-      const ctx = c.getContext("2d")!;
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.arc(size, size, size, 0, Math.PI * 2);
-      ctx.fill();
-      resolve(c.toDataURL("image/png"));
-    };
-    img.src = YARN_BALL_SRC;
-  });
-}
 
 function getBubbleRadius(
   item: { type: string; hasYarn?: boolean },
@@ -159,7 +122,6 @@ export default function Home() {
   const panStart = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const pinchRef = useRef<{ dist0: number; scale0: number } | null>(null);
   const animRef = useRef<number>(0);
-  const [tintedUrls, setTintedUrls] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     const onResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
@@ -172,27 +134,6 @@ export default function Home() {
     fetchYarns();
     fetchInspirations();
   }, [fetchYarns, fetchInspirations]);
-
-  useEffect(() => {
-    const yarnColors = new Map<string, string>();
-    for (const y of yarns) {
-      const color = y.colors?.[0] || y.color || "#60a5fa";
-      yarnColors.set(`y-${y.id}`, color);
-    }
-    let cancelled = false;
-    void (async () => {
-      const map = new Map(Array.from(tintedUrls.entries()));
-      for (const [key, color] of Array.from(yarnColors)) {
-        if (map.has(key)) continue;
-        const size = Math.max(MAX_R * 2, 96);
-        const url = await tintYarnBall(color, size);
-        if (cancelled) return;
-        map.set(key, url);
-      }
-      setTintedUrls(map);
-    })();
-    return () => { cancelled = true; };
-  }, [yarns]);
 
   useEffect(() => {
     let running = true;
@@ -503,11 +444,8 @@ export default function Home() {
                 <filter id="feltShadow" x="-30%" y="-30%" width="160%" height="160%">
                   <feDropShadow dx={0} dy={4} stdDeviation={8} floodColor="rgba(0,0,0,0.12)" />
                 </filter>
-                <filter id="innerHighlight" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx={0} dy={1} stdDeviation={0} floodColor="rgba(255,255,255,0.45)" />
-                </filter>
-                <pattern id="stitchPattern" patternUnits="userSpaceOnUse" width={8} height={8}>
-                  <rect width={8} height={8} fill="none" stroke="rgba(47,95,158,0.35)" strokeWidth={1.5} strokeDasharray="3 3" />
+                <pattern id="feltPattern" patternUnits="userSpaceOnUse" width={128} height={128}>
+                  <image href="/knitknit/texture/felt-cream-1024.png" width={128} height={128} preserveAspectRatio="xMidYMid slice" />
                 </pattern>
               </defs>
 
@@ -518,7 +456,6 @@ export default function Home() {
               ))}
 
               {bubbles.map((b) => {
-                const tintedUrl = tintedUrls.get(b.id);
                 return (
                 <g
                   key={b.id}
@@ -531,14 +468,9 @@ export default function Home() {
                 >
                   {b.type === "yarn" ? (
                     <>
-                      {tintedUrl ? (
-                        <>
-                          <clipPath id={`cy-${b.id}`}><circle cx={b.baseX} cy={b.baseY} r={b.r} /></clipPath>
-                          <image href={tintedUrl} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} filter="url(#yarnShadow)" />
-                        </>
-                      ) : (
-                        <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} filter="url(#yarnShadow)" />
-                      )}
+                      <clipPath id={`cy-${b.id}`}><circle cx={b.baseX} cy={b.baseY} r={b.r} /></clipPath>
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="url(#feltPattern)" filter="url(#yarnShadow)" />
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} fillOpacity={0.55} />
                       {hoveredId === b.id && b.image ? (
                         <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={0.85} />
                       ) : null}

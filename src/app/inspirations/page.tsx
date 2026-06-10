@@ -68,7 +68,7 @@ export default function InspirationsPage() {
               "Pinterest": "bg-red-100 text-red-700",
             };
             return (
-              <div key={insp.id} className="card-grain rounded-[16px] border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition group">
+              <div key={insp.id} className="bg-white rounded-[16px] border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition group">
                 <Link href={`/inspiration-detail?id=${insp.id}`} className="block p-4">
                   {insp.image ? (
                     <img src={insp.image} alt={insp.title} className="w-full h-40 object-cover rounded-[16px] mb-3" referrerPolicy="no-referrer" />

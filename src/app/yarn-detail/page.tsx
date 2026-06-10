@@ -34,7 +34,7 @@ function YarnDetailContent() {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div className="max-w-3xl mx-auto space-y-6">
-      <button onClick={() => router.back()} className="relative overflow-hidden px-3 py-1.5 rounded-[18px] surface-felt text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnBack}</button>
+      <button onClick={() => router.back()} className="inline-block px-3 py-1.5 rounded-[18px] bg-white text-[#2B2B2B] text-sm border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnBack}</button>
 
       <div className="card-yarn rounded-[16px] p-6 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
@@ -62,8 +62,8 @@ function YarnDetailContent() {
             )}
             {yarn.notes && <p className="mt-3 text-sm text-[#6B6B6B]">{yarn.notes}</p>}
             <div className="flex gap-2 mt-4">
-              <button onClick={() => setShowEdit(true)} className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnEdit}</button>
-              <button onClick={async () => { await deleteYarn(yarn.id); router.push("/yarns"); }} className="relative overflow-hidden px-3 py-1.5 text-sm rounded-[18px] surface-felt text-red-600 border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnDelete}</button>
+              <button onClick={() => setShowEdit(true)} className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnEdit}</button>
+              <button onClick={async () => { await deleteYarn(yarn.id); router.push("/yarns"); }} className="inline-block px-3 py-1.5 text-sm rounded-[18px] bg-white text-red-600 border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">{texts.yarnDelete}</button>
             </div>
           </div>
         </div>
@@ -72,7 +72,7 @@ function YarnDetailContent() {
       <RecommendationPanel color={yarn.color} material={yarn.material} weight={yarn.weight} tags={yarn.tags} colors={yarn.colors} />
 
       {relatedInspirations.length > 0 && (
-        <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRelatedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {relatedInspirations.map(insp => (
@@ -86,7 +86,7 @@ function YarnDetailContent() {
       )}
 
       {matchedInspirations.length > 0 && (
-        <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+        <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
           <h3 className="font-bold text-[#2B2B2B] mb-3">{texts.yarnRecommendedInspirations}</h3>
           <div className="grid grid-cols-2 gap-3">
             {matchedInspirations.map(insp => (

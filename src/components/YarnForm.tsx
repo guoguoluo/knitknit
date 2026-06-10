@@ -224,7 +224,7 @@ export default function YarnForm({ onClose, initial }: Props) {
             </div>
             <div className="flex gap-2">
               <input type="color" className="w-9 h-9 rounded-lg border border-[rgba(47,95,158,0.2)] cursor-pointer" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} />
-              <button type="button" onClick={addColor} className="px-3 py-1 text-xs rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition">添加色块</button>
+              <button type="button" onClick={addColor} className="px-3 py-1 text-xs rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition">添加色块</button>
             </div>
             {analyzing && <p className="text-xs text-[#6B6B6B] mt-1">正在从图片识别颜色...</p>}
           </div>
@@ -250,10 +250,10 @@ export default function YarnForm({ onClose, initial }: Props) {
             )}
           </div>
           <div className="flex gap-3 pt-2">
-            <button type="submit" className="relative overflow-hidden flex-1 px-4 py-2 rounded-[18px] surface-felt-accent text-white font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
+            <button type="submit" className="inline-block flex-1 px-4 py-2 rounded-[18px] btn-white text-[#464646] font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition">
               {initial ? "保存" : "添加"}
             </button>
-            <button type="button" onClick={onClose} className="relative overflow-hidden px-4 py-2 rounded-[18px] surface-felt text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">取消</button>
+            <button type="button" onClick={onClose} className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">取消</button>
           </div>
         </form>
       </div>

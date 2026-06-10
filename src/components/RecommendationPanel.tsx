@@ -71,7 +71,7 @@ export default function RecommendationPanel({ color, material, weight, tags, col
   ];
 
   return (
-    <div className="card-grain rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
+    <div className="bg-white rounded-[16px] p-5 border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)]">
       <h3 className="font-bold text-[#2B2B2B] mb-1">🔍 智能推荐</h3>
       <p className="text-xs text-[#6B6B6B] mb-4">根据毛线信息自动搜索：<span className="text-[#2B2B2B]">{searchQuery || "暂无关键词"}</span></p>
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -81,7 +81,7 @@ export default function RecommendationPanel({ color, material, weight, tags, col
             href={p.url}
             target="_blank"
             rel="noopener noreferrer"
-            className={`relative overflow-hidden flex items-center gap-2 px-3 py-2.5 rounded-[18px] surface-felt border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition text-sm font-medium text-[#2B2B2B]`}
+            className={`inline-block flex items-center gap-2 px-3 py-2.5 rounded-[18px] bg-white border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition text-sm font-medium text-[#2B2B2B]`}
           >
             <span>{p.icon}</span>
             <span>{p.name}</span>
