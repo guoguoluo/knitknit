@@ -79,7 +79,7 @@ function InspirationDetailContent() {
             )}
             <div className="flex gap-2 mt-4">
               {insp.url && (
-                <a href={insp.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center h-[56px] px-6 rounded-[999px] bg-[#5D4037] text-white font-bold border-0">
+                <a href={insp.url} target="_blank" rel="noopener noreferrer" className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
                   {texts.inspViewOriginal}
                 </a>
               )}
