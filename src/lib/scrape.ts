@@ -1,10 +1,37 @@
 const PROXY_TIMEOUT = 9000;
 
-const CORS_PROXIES = [
-  (u: string) => `https://r.jina.ai/${u}`,
-  (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
-  (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
-  (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
+type ProxyRequest = {
+  url: string;
+  init?: RequestInit;
+};
+
+const CORS_PROXIES: Array<(u: string) => ProxyRequest> = [
+  (u: string) => ({
+    url: `https://r.jina.ai/${u}`,
+    init: {
+      headers: {
+        "x-engine": "browser",
+        "x-timeout": "20",
+        "x-no-cache": "true",
+      },
+    },
+  }),
+  (u: string) => ({
+    url: "https://r.jina.ai/",
+    init: {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        "x-engine": "browser",
+        "x-timeout": "20",
+        "x-no-cache": "true",
+      },
+      body: new URLSearchParams({ url: u }).toString(),
+    },
+  }),
+  (u: string) => ({ url: `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}` }),
+  (u: string) => ({ url: `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}` }),
+  (u: string) => ({ url: `https://api.allorigins.win/get?url=${encodeURIComponent(u)}` }),
 ];
 
 const SITE_SUFFIXES = [
@@ -39,6 +66,16 @@ function decodeHtml(value: string): string {
     .trim();
 }
 
+function decodeEscapedUrl(value: string): string {
+  return decodeHtml(value)
+    .replace(/\\u002F/gi, "/")
+    .replace(/\\\//g, "/")
+    .replace(/\\u0026/gi, "&")
+    .replace(/\\u003D/gi, "=")
+    .replace(/\\u003F/gi, "?")
+    .replace(/\\u0025/gi, "%");
+}
+
 function detectPlatform(url: string): string {
   try {
     const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
@@ -57,9 +94,13 @@ function isLikelyXhsDefaultImage(url: string): boolean {
   return (
     lower.includes("xiaohongshu.com/favicon") ||
     lower.includes("xiaohongshu.com/logo") ||
+    lower.includes("picasso-static.xiaohongshu.com") ||
+    lower.includes("fe-platform") ||
     lower.includes("xhs-pc-web") ||
     lower.includes("official") ||
     lower.includes("/avatar/") ||
+    lower.includes("sns-avatar") ||
+    lower.includes("profile") ||
     lower.includes("avatar") ||
     lower.includes("icon") ||
     lower.includes("static") && lower.includes("xiaohongshu")
@@ -76,15 +117,36 @@ function looksLikeImageUrl(value: string): boolean {
   );
 }
 
+function isSvgAsset(url: string): boolean {
+  try {
+    return new URL(url).pathname.toLowerCase().endsWith(".svg");
+  } catch {
+    return /\.svg(?:[?#]|$)/i.test(url);
+  }
+}
+
+function isLikelyRavelryDefaultImage(url: string): boolean {
+  const lower = url.toLowerCase();
+  return (
+    lower.includes("style-cdn.ravelrycache.com") ||
+    lower.includes("/assets/") ||
+    lower.includes("/icons/") ||
+    lower.includes("patterns.svg") ||
+    lower.includes("logo") ||
+    lower.includes("avatar") ||
+    lower.includes("placeholder")
+  );
+}
+
 function addImageUnique(
   images: string[],
   seen: Set<string>,
   src: unknown,
   baseUrl: string,
-  options?: { xhsContentOnly?: boolean }
+  options?: { xhsContentOnly?: boolean; ravelryContentOnly?: boolean }
 ): void {
   if (typeof src !== "string") return;
-  const raw = decodeHtml(src).replace(/\\u002F/gi, "/").replace(/\\\//g, "/");
+  const raw = decodeEscapedUrl(src);
   if (!raw || raw.startsWith("data:") || raw.startsWith("blob:")) return;
 
   let resolved: string;
@@ -105,13 +167,14 @@ function addImageUnique(
   const lower = resolved.toLowerCase();
   if (
     seen.has(resolved) ||
-    lower.endsWith(".svg") ||
+    isSvgAsset(resolved) ||
     lower.includes("avatar") ||
     lower.includes("logo") ||
     lower.includes("favicon") ||
     lower.includes("placeholder") ||
     !looksLikeImageUrl(resolved) ||
-    (options?.xhsContentOnly && (!lower.includes("xhscdn.com") || isLikelyXhsDefaultImage(resolved)))
+    (options?.xhsContentOnly && (!lower.includes("xhscdn.com") || isLikelyXhsDefaultImage(resolved))) ||
+    (options?.ravelryContentOnly && (!lower.includes("ravelrycache.com") || isLikelyRavelryDefaultImage(resolved)))
   ) return;
 
   seen.add(resolved);
@@ -123,7 +186,7 @@ function walkJsonImages(
   images: string[],
   seen: Set<string>,
   baseUrl: string,
-  options?: { xhsContentOnly?: boolean }
+  options?: { xhsContentOnly?: boolean; ravelryContentOnly?: boolean }
 ): void {
   if (!value || images.length >= 12) return;
   if (typeof value === "string") {
@@ -239,27 +302,39 @@ function stripSiteSuffix(title: string): string {
   return value;
 }
 
-function extractMetaImages(html: string, url: string, images: string[], seen: Set<string>): void {
+function extractMetaImages(
+  html: string,
+  url: string,
+  images: string[],
+  seen: Set<string>,
+  options?: { xhsContentOnly?: boolean; ravelryContentOnly?: boolean }
+): void {
   const metaImgRe = /<meta\s+[^>]*(?:(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'][^>]*content=["']([^"']+)["']|content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:image(?::secure_url)?|twitter:image(?::src)?)["'])[^>]*>/gi;
   let match: RegExpExecArray | null;
   while ((match = metaImgRe.exec(html)) !== null) {
-    addImageUnique(images, seen, match[1] || match[2], url);
+    addImageUnique(images, seen, match[1] || match[2], url, options);
   }
 }
 
-function extractStructuredImages(html: string, url: string, images: string[], seen: Set<string>): void {
+function extractStructuredImages(
+  html: string,
+  url: string,
+  images: string[],
+  seen: Set<string>,
+  options?: { xhsContentOnly?: boolean; ravelryContentOnly?: boolean }
+): void {
   const ldRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let match: RegExpExecArray | null;
   while ((match = ldRe.exec(html)) !== null) {
     const json = safeJsonParse(decodeHtml(match[1]));
-    walkJsonImages(json, images, seen, url);
+    walkJsonImages(json, images, seen, url, options);
   }
 
   const nextMatch = html.match(/<script[^>]*id=["']__NEXT_DATA__["'][^>]*>([\s\S]*?)<\/script>/i);
-  if (nextMatch) walkJsonImages(safeJsonParse(decodeHtml(nextMatch[1])), images, seen, url);
+  if (nextMatch) walkJsonImages(safeJsonParse(decodeHtml(nextMatch[1])), images, seen, url, options);
 
   const nuxtMatch = html.match(/window\.__NUXT__\s*=\s*([\s\S]*?);<\/script>/i);
-  if (nuxtMatch) walkJsonImages(safeJsonParse(nuxtMatch[1]), images, seen, url);
+  if (nuxtMatch) walkJsonImages(safeJsonParse(nuxtMatch[1]), images, seen, url, options);
 }
 
 function extractXhsImages(html: string, url: string, images: string[], seen: Set<string>): string {
@@ -283,17 +358,42 @@ function extractXhsImages(html: string, url: string, images: string[], seen: Set
     }
   }
 
-  const cdnMatches = html.match(/https?:\/\/[^"'\s\\]+xhscdn[^"'\s\\]+/gi) || [];
-  cdnMatches.forEach((item) => addImageUnique(images, seen, item.replace(/\\u002F/g, "/"), url, { xhsContentOnly: true }));
+  const quotedCdnMatches = html.match(/["']([^"']*xhscdn[^"']*)["']/gi) || [];
+  quotedCdnMatches.forEach((item) => addImageUnique(images, seen, item.slice(1, -1), url, { xhsContentOnly: true }));
+
+  const directCdnMatches = html.match(/https?:\/\/[^"'\s<>\\]+xhscdn[^"'\s<>\\]+/gi) || [];
+  directCdnMatches.forEach((item) => addImageUnique(images, seen, item, url, { xhsContentOnly: true }));
+
+  const escapedCdnMatches = html.match(/https?:\\u002F\\u002F[^"'\s<>]+?xhscdn[^"'\s<>]+/gi) || [];
+  escapedCdnMatches.forEach((item) => addImageUnique(images, seen, item, url, { xhsContentOnly: true }));
   return title;
+}
+
+function normalizeRavelryImageUrl(url: string): string {
+  return url
+    .replace(/\\u002F/gi, "/")
+    .replace(/\\\//g, "/")
+    .replace(/_(?:thumbnail|small|small2|medium2)(?=\.[a-z]{3,4}(?:[?#]|$))/i, "_medium");
 }
 
 function extractRavelryImages(html: string, url: string, images: string[], seen: Set<string>): void {
   const matches = html.match(/https?:\/\/[^"'\s\\]*(?:ravelrycache|images4-[a-z]+\.ravelrycache|images\.ravelrycache)[^"'\s\\]+/gi) || [];
-  matches.forEach((item) => addImageUnique(images, seen, item.replace(/\\u002F/g, "/"), url));
+  const prioritized = matches
+    .map(normalizeRavelryImageUrl)
+    .sort((a, b) => {
+      const score = (item: string) => {
+        const lower = item.toLowerCase();
+        if (isLikelyRavelryDefaultImage(lower)) return 100;
+        if (lower.includes("/uploads/")) return 0;
+        if (lower.includes("pattern")) return 1;
+        return 10;
+      };
+      return score(a) - score(b);
+    });
+  prioritized.forEach((item) => addImageUnique(images, seen, item, url, { ravelryContentOnly: true }));
 }
 
-function extractMarkdownImages(markdown: string, url: string, images: string[], seen: Set<string>, options?: { xhsContentOnly?: boolean }): void {
+function extractMarkdownImages(markdown: string, url: string, images: string[], seen: Set<string>, options?: { xhsContentOnly?: boolean; ravelryContentOnly?: boolean }): void {
   const markdownImageRe = /!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/gi;
   let match: RegExpExecArray | null;
   while ((match = markdownImageRe.exec(markdown)) !== null && images.length < 12) {
@@ -306,12 +406,18 @@ function extractMarkdownImages(markdown: string, url: string, images: string[], 
   }
 }
 
-function extractImgTags(html: string, url: string, images: string[], seen: Set<string>): void {
+function extractImgTags(
+  html: string,
+  url: string,
+  images: string[],
+  seen: Set<string>,
+  options?: { xhsContentOnly?: boolean; ravelryContentOnly?: boolean }
+): void {
   const imgRe = /<img[^>]+(?:src|data-src|data-original|srcset)=["']([^"']+)["'][^>]*>/gi;
   let match: RegExpExecArray | null;
   while ((match = imgRe.exec(html)) !== null && images.length < 12) {
     const firstSrc = match[1].split(",")[0]?.trim().split(/\s+/)[0];
-    addImageUnique(images, seen, firstSrc, url);
+    addImageUnique(images, seen, firstSrc, url, options);
   }
 }
 
@@ -327,20 +433,27 @@ export function parseHtmlForData(html: string, url: string): ScrapeData {
       extractMarkdownImages(html, url, images, seen, { xhsContentOnly: true });
     }
     if (images.length === 0) {
-      extractMetaImages(html, url, images, seen);
-      extractStructuredImages(html, url, images, seen);
-      if (images.length === 0) extractImgTags(html, url, images, seen);
+      extractMetaImages(html, url, images, seen, { xhsContentOnly: true });
+      extractStructuredImages(html, url, images, seen, { xhsContentOnly: true });
+      if (images.length === 0) extractImgTags(html, url, images, seen, { xhsContentOnly: true });
     }
     title = title || extractTitle(html, url);
     return { title, images: images.slice(0, 8), platform };
   }
 
-  extractMetaImages(html, url, images, seen);
-  extractStructuredImages(html, url, images, seen);
-  extractMarkdownImages(html, url, images, seen);
-
-  if (platform === "小红书") title = extractXhsImages(html, url, images, seen) || title;
-  if (platform === "Ravelry") extractRavelryImages(html, url, images, seen);
+  if (platform === "Ravelry") {
+    extractRavelryImages(html, url, images, seen);
+    if (images.length === 0) {
+      extractStructuredImages(html, url, images, seen);
+      extractMarkdownImages(html, url, images, seen, { ravelryContentOnly: true });
+      extractMetaImages(html, url, images, seen);
+    }
+  } else {
+    extractMetaImages(html, url, images, seen);
+    extractStructuredImages(html, url, images, seen);
+    extractMarkdownImages(html, url, images, seen);
+    if (platform === "小红书") title = extractXhsImages(html, url, images, seen) || title;
+  }
 
   if (images.length === 0) extractImgTags(html, url, images, seen);
   title = title || extractTitle(html, url);
@@ -348,17 +461,17 @@ export function parseHtmlForData(html: string, url: string): ScrapeData {
   return { title, images: images.slice(0, 8), platform };
 }
 
-async function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<string | null> {
+async function fetchViaProxy(request: ProxyRequest, signal?: AbortSignal): Promise<string | null> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), PROXY_TIMEOUT);
   const onParentAbort = signal ? () => controller.abort() : undefined;
   if (signal && onParentAbort) signal.addEventListener("abort", onParentAbort, { once: true });
 
-  return fetch(proxyUrl, { signal: controller.signal, cache: "no-cache" })
+  return fetch(request.url, { ...request.init, signal: controller.signal, cache: "no-cache" })
     .then((res) => {
       if (!res.ok) return null;
       const ct = res.headers.get("content-type") || "";
-      if (ct.includes("json") || proxyUrl.includes("/get?")) {
+      if (ct.includes("json") || request.url.includes("/get?")) {
         return res.json().then((json) =>
           typeof json === "string" ? json : json.contents || json.body || ""
         );
@@ -390,6 +503,47 @@ async function fetchViaConfiguredEndpoint(url: string, signal?: AbortSignal): Pr
   return null;
 }
 
+function microlinkScreenshotUrl(url: string): string {
+  const params = new URLSearchParams({
+    url,
+    screenshot: "true",
+    meta: "false",
+    embed: "screenshot.url",
+    waitForTimeout: "3000",
+  });
+  return `https://api.microlink.io?${params.toString()}`;
+}
+
+async function fetchViaMicrolink(url: string, signal?: AbortSignal): Promise<ScrapeData | null> {
+  const platform = detectPlatform(url);
+  try {
+    const params = new URLSearchParams({ url });
+    const res = await fetch(`https://api.microlink.io?${params.toString()}`, {
+      signal,
+      cache: "no-cache",
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const data = json?.data;
+    if (!data) return null;
+
+    const images: string[] = [];
+    const imageUrl = data?.image?.url;
+    if (typeof imageUrl === "string") {
+      const seen = new Set<string>();
+      addImageUnique(images, seen, imageUrl, url, platform === "小红书" ? { xhsContentOnly: true } : undefined);
+    }
+
+    if (platform === "小红书" && images.length === 0) {
+      images.push(microlinkScreenshotUrl(url));
+    }
+
+    const title = typeof data.title === "string" ? stripSiteSuffix(data.title) : "";
+    if (title || images.length > 0) return { title, images, platform };
+  } catch {}
+  return null;
+}
+
 export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<ScrapeData> {
   const normalized = normalizeScrapeUrl(url);
   const platform = detectPlatform(normalized);
@@ -406,6 +560,9 @@ export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<Scra
       if (data.title || data.images.length > 0) return data;
     }
   }
+
+  const microlinkData = await fetchViaMicrolink(normalized, signal);
+  if (microlinkData) return microlinkData;
 
   return { title: "", images: [], platform };
 }

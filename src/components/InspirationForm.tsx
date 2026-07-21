@@ -39,16 +39,31 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const abortRef = useRef<AbortController | null>(null);
   const lastScrapedRef = useRef(initial?.url || "");
 
-  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const setImageFromFile = (file: File) => {
+    if (!file.type.startsWith("image/")) return;
     setUploading(true);
+    setScrapeError("");
     const reader = new FileReader();
     reader.onload = () => {
       setImage(reader.result as string);
       setUploading(false);
     };
+    reader.onerror = () => setUploading(false);
     reader.readAsDataURL(file);
+  };
+
+  const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageFromFile(file);
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
+    const item = Array.from(e.clipboardData.items).find((entry) => entry.type.startsWith("image/"));
+    const file = item?.getAsFile();
+    if (!file) return;
+    e.preventDefault();
+    setImageFromFile(file);
   };
 
   const handlePatternUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,7 +141,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
 
   return (
     <div className="modalOverlay">
-      <div className="modalPanel felt-card p-4 sm:p-6 w-full max-w-lg">
+      <div className="modalPanel felt-card p-4 sm:p-6 w-full max-w-lg" onPaste={handlePaste}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-bold text-[#2B2B2B]">
             {initial ? texts.inspFormEditTitle : texts.inspFormAddTitle}
