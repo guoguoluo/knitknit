@@ -1,9 +1,10 @@
-const PROXY_TIMEOUT = 5000;
+const PROXY_TIMEOUT = 9000;
 
 const CORS_PROXIES = [
+  (u: string) => `https://r.jina.ai/${u}`,
+  (u: string) => `https://api.codetabs.com/v1/proxy/?quest=${encodeURIComponent(u)}`,
   (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
   (u: string) => `https://api.allorigins.win/get?url=${encodeURIComponent(u)}`,
-  (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
 ];
 
 const SITE_SUFFIXES = [
@@ -58,7 +59,20 @@ function isLikelyXhsDefaultImage(url: string): boolean {
     lower.includes("xiaohongshu.com/logo") ||
     lower.includes("xhs-pc-web") ||
     lower.includes("official") ||
+    lower.includes("/avatar/") ||
+    lower.includes("avatar") ||
+    lower.includes("icon") ||
     lower.includes("static") && lower.includes("xiaohongshu")
+  );
+}
+
+function looksLikeImageUrl(value: string): boolean {
+  const lower = value.toLowerCase();
+  return (
+    /\.(jpe?g|png|webp|avif)(?:[?#].*)?$/i.test(lower) ||
+    lower.includes("xhscdn.com") ||
+    lower.includes("ravelrycache.com") ||
+    lower.includes("images4-") && lower.includes("ravelrycache")
   );
 }
 
@@ -70,7 +84,7 @@ function addImageUnique(
   options?: { xhsContentOnly?: boolean }
 ): void {
   if (typeof src !== "string") return;
-  const raw = decodeHtml(src);
+  const raw = decodeHtml(src).replace(/\\u002F/gi, "/").replace(/\\\//g, "/");
   if (!raw || raw.startsWith("data:") || raw.startsWith("blob:")) return;
 
   let resolved: string;
@@ -96,6 +110,7 @@ function addImageUnique(
     lower.includes("logo") ||
     lower.includes("favicon") ||
     lower.includes("placeholder") ||
+    !looksLikeImageUrl(resolved) ||
     (options?.xhsContentOnly && (!lower.includes("xhscdn.com") || isLikelyXhsDefaultImage(resolved)))
   ) return;
 
@@ -112,7 +127,7 @@ function walkJsonImages(
 ): void {
   if (!value || images.length >= 12) return;
   if (typeof value === "string") {
-    if (/^https?:\/\/|^\/\//.test(value) && /\.(jpe?g|png|webp|avif)(\?|$)/i.test(value)) {
+    if (/^https?:\/\/|^\/\//.test(value) && looksLikeImageUrl(value)) {
       addImageUnique(images, seen, value, baseUrl, options);
     }
     return;
@@ -177,6 +192,18 @@ function extractJsonObjectAfter(html: string, marker: string): unknown {
 }
 
 function extractTitle(html: string, url: string): string {
+  const markdownTitle = html.match(/^Title:\s*(.+)$/im);
+  if (markdownTitle) {
+    const value = decodeHtml(markdownTitle[1]);
+    if (value) return stripSiteSuffix(value);
+  }
+
+  const markdownH1 = html.match(/^#\s+(.+)$/m);
+  if (markdownH1) {
+    const value = decodeHtml(markdownH1[1]);
+    if (value && !/^images?\s*$/i.test(value)) return stripSiteSuffix(value);
+  }
+
   const metaTitle = html.match(/<meta\s+[^>]*(?:property|name)=["'](?:og:title|twitter:title)["'][^>]*content=["']([^"']+)["'][^>]*>/i)
     || html.match(/<meta\s+[^>]*content=["']([^"']+)["'][^>]*(?:property|name)=["'](?:og:title|twitter:title)["'][^>]*>/i);
   let title = metaTitle ? decodeHtml(metaTitle[1]) : "";
@@ -191,9 +218,7 @@ function extractTitle(html: string, url: string): string {
     if (h1) title = decodeHtml(h1[1].replace(/<[^>]+>/g, ""));
   }
 
-  for (const suffix of SITE_SUFFIXES) {
-    if (title.endsWith(suffix)) title = title.slice(0, -suffix.length).trim();
-  }
+  title = stripSiteSuffix(title);
   title = title.replace(/^(?:Ravelry|Instagram|Pinterest|Etsy|YouTube|Twitter):\s*/i, "");
 
   if (!title) {
@@ -204,6 +229,14 @@ function extractTitle(html: string, url: string): string {
   }
 
   return title;
+}
+
+function stripSiteSuffix(title: string): string {
+  let value = title;
+  for (const suffix of SITE_SUFFIXES) {
+    if (value.endsWith(suffix)) value = value.slice(0, -suffix.length).trim();
+  }
+  return value;
 }
 
 function extractMetaImages(html: string, url: string, images: string[], seen: Set<string>): void {
@@ -260,6 +293,19 @@ function extractRavelryImages(html: string, url: string, images: string[], seen:
   matches.forEach((item) => addImageUnique(images, seen, item.replace(/\\u002F/g, "/"), url));
 }
 
+function extractMarkdownImages(markdown: string, url: string, images: string[], seen: Set<string>, options?: { xhsContentOnly?: boolean }): void {
+  const markdownImageRe = /!\[[^\]]*]\((https?:\/\/[^)\s]+)\)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = markdownImageRe.exec(markdown)) !== null && images.length < 12) {
+    addImageUnique(images, seen, match[1], url, options);
+  }
+
+  const rawUrlRe = /https?:\/\/[^\s"'<>\\)]+/gi;
+  while ((match = rawUrlRe.exec(markdown)) !== null && images.length < 12) {
+    addImageUnique(images, seen, match[0], url, options);
+  }
+}
+
 function extractImgTags(html: string, url: string, images: string[], seen: Set<string>): void {
   const imgRe = /<img[^>]+(?:src|data-src|data-original|srcset)=["']([^"']+)["'][^>]*>/gi;
   let match: RegExpExecArray | null;
@@ -278,6 +324,9 @@ export function parseHtmlForData(html: string, url: string): ScrapeData {
   if (/xiaohongshu|xhslink|xhscdn/i.test(url)) {
     title = extractXhsImages(html, url, images, seen) || title;
     if (images.length === 0) {
+      extractMarkdownImages(html, url, images, seen, { xhsContentOnly: true });
+    }
+    if (images.length === 0) {
       extractMetaImages(html, url, images, seen);
       extractStructuredImages(html, url, images, seen);
       if (images.length === 0) extractImgTags(html, url, images, seen);
@@ -288,6 +337,7 @@ export function parseHtmlForData(html: string, url: string): ScrapeData {
 
   extractMetaImages(html, url, images, seen);
   extractStructuredImages(html, url, images, seen);
+  extractMarkdownImages(html, url, images, seen);
 
   if (platform === "小红书") title = extractXhsImages(html, url, images, seen) || title;
   if (platform === "Ravelry") extractRavelryImages(html, url, images, seen);
@@ -322,22 +372,29 @@ async function fetchViaProxy(proxyUrl: string, signal?: AbortSignal): Promise<st
     });
 }
 
+async function fetchViaConfiguredEndpoint(url: string, signal?: AbortSignal): Promise<ScrapeData | null> {
+  const endpoint = process.env.NEXT_PUBLIC_SCRAPE_ENDPOINT;
+  if (!endpoint) return null;
+
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url }),
+      signal,
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data?.title || data?.images?.length) return data;
+  } catch {}
+  return null;
+}
+
 export async function scrapeUrl(url: string, signal?: AbortSignal): Promise<ScrapeData> {
   const normalized = normalizeScrapeUrl(url);
   const platform = detectPlatform(normalized);
-
-  try {
-    const res = await fetch("/api/scrape", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ url: normalized }),
-      signal,
-    });
-    if (res.ok) {
-      const data = await res.json();
-      if (data.title || data.images?.length) return data;
-    }
-  } catch {}
+  const configuredData = await fetchViaConfiguredEndpoint(normalized, signal);
+  if (configuredData) return configuredData;
 
   const results = await Promise.allSettled(
     CORS_PROXIES.map((proxy) => fetchViaProxy(proxy(normalized), signal))

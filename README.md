@@ -53,3 +53,5 @@ For the `guoguoluo/knitknit` repository, the expected Pages URL is:
 ```text
 https://guoguoluo.github.io/knitknit/
 ```
+
+URL scraping on GitHub Pages runs in the browser, so it uses public read/CORS proxies by default. For a more stable demo, especially for Xiaohongshu and Ravelry, set `NEXT_PUBLIC_SCRAPE_ENDPOINT` to your own lightweight scraping proxy before building.
