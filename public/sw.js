@@ -1,5 +1,11 @@
-self.addEventListener("install", () => self.skipWaiting());
-self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
-self.addEventListener("fetch", (e) => {
-  e.respondWith(fetch(e.request).catch(() => new Response(null, { status: 204 })));
+self.addEventListener("install", () => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    self.registration.unregister().then(() => self.clients.matchAll()).then((clients) => {
+      clients.forEach((client) => client.navigate(client.url));
+    })
+  );
 });

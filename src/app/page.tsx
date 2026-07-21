@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useYarnStore, useInspirationStore } from "@/lib/store";
-import { texts } from "@/lib/texts";
+import { useTexts } from "@/lib/language";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -29,9 +29,6 @@ const TITLE_Y = 40;
 const MIN_FONT = 8;
 const MAX_R = 48;
 const MIN_R = 12;
-const HEADER_H = 56;
-const TITLE_H = 60;
-const BTN_H = 56;
 
 function getBubbleRadius(
   item: { type: string; hasYarn?: boolean },
@@ -52,18 +49,18 @@ function scatterBubbles(
   const result: Bubble[] = [];
   const margin = 20;
   const topY = TITLE_Y + 20;
-  const bottomY = availH - margin;
+  const bottomY = Math.max(topY + baseR * 2 + margin, availH - margin);
   const leftHalf = canvasW / 2;
 
   for (const item of items) {
     const r = getBubbleRadius(item, baseR);
     let x: number, y: number;
     if (item.type === "yarn") {
-      x = margin + Math.random() * (leftHalf - margin * 2);
+      x = margin + Math.random() * Math.max(1, leftHalf - margin * 2);
     } else {
-      x = leftHalf + Math.random() * (canvasW - leftHalf - margin * 2);
+      x = leftHalf + Math.random() * Math.max(1, canvasW - leftHalf - margin * 2);
     }
-    y = topY + Math.random() * (bottomY - topY);
+    y = topY + Math.random() * Math.max(1, bottomY - topY);
 
     result.push({
       ...item,
@@ -108,10 +105,12 @@ function scatterBubbles(
 }
 
 export default function Home() {
+  const texts = useTexts();
   const router = useRouter();
   const { yarns, fetchYarns } = useYarnStore();
   const { inspirations, fetchInspirations } = useInspirationStore();
-  const [winSize, setWinSize] = useState({ w: 600, h: 600 });
+  const bubbleAreaRef = useRef<HTMLDivElement | null>(null);
+  const [areaSize, setAreaSize] = useState({ w: 600, h: 420 });
   const [time, setTime] = useState(0);
   const dragOffsets = useRef<Map<string, { ox: number; oy: number; returnTime: number | null }>>(new Map());
   const [tick, setTick] = useState(0);
@@ -124,10 +123,23 @@ export default function Home() {
   const animRef = useRef<number>(0);
 
   useEffect(() => {
-    const onResize = () => setWinSize({ w: window.innerWidth, h: window.innerHeight });
-    onResize();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const updateSize = () => {
+      const rect = bubbleAreaRef.current?.getBoundingClientRect();
+      setAreaSize({
+        w: Math.max(320, Math.round(rect?.width || window.innerWidth || 600)),
+        h: Math.max(240, Math.round(rect?.height || 420)),
+      });
+    };
+    updateSize();
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(updateSize) : null;
+    if (bubbleAreaRef.current && observer) observer.observe(bubbleAreaRef.current);
+    window.addEventListener("resize", updateSize);
+    window.addEventListener("orientationchange", updateSize);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateSize);
+      window.removeEventListener("orientationchange", updateSize);
+    };
   }, []);
 
   useEffect(() => {
@@ -206,8 +218,8 @@ export default function Home() {
 
   const totalItems = yarnItems.length + linkedInspItems.length + unlinkedInspItems.length;
 
-  const availW = winSize.w;
-  const availH = winSize.h - HEADER_H - TITLE_H - BTN_H;
+  const availW = areaSize.w;
+  const availH = areaSize.h;
 
   const canvasWidth = availW;
   const canvasHeight = Math.max(availH, 200);
@@ -397,28 +409,28 @@ export default function Home() {
   const onTouchEnd = useCallback(() => { pinchRef.current = null; }, []);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="homeSurface h-full flex flex-col">
       {/* title bar */}
       <section className="text-center shrink-0 px-2 pt-2 pb-0">
         <h1 className="text-xl sm:text-3xl font-bold text-gray-800 leading-tight">
           {texts.homeHeading}
         </h1>
         <p className="text-gray-500 text-xs leading-relaxed">
-          {linkedYarns.length} 种关联毛线 · {inspirations.length} 个灵感
+          {texts.homeStats(linkedYarns.length, inspirations.length)}
         </p>
       </section>
 
       {/* full-viewport bubble area */}
-      <div className="flex-1 min-h-0 relative overflow-hidden bg-[#F8EFDF]" onWheel={onWheel}
+      <div ref={bubbleAreaRef} className="bubble-bg flex-1 min-h-[240px] relative overflow-hidden" onWheel={onWheel}
         onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
 
         {inspirations.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center px-8">
             <div className="text-6xl mb-4 opacity-70">🧶</div>
-            <h2 className="text-xl font-bold text-gray-700 mb-2">开始收集灵感吧</h2>
-            <p className="text-sm text-gray-400 mb-6 max-w-xs">去小红书、Ravelry 发现好看的毛衣和图解，添加到这里</p>
+            <h2 className="text-xl font-bold text-gray-700 mb-2">{texts.homeEmptyTitle}</h2>
+            <p className="text-sm text-gray-500 mb-6 max-w-xs">{texts.homeEmptyBody}</p>
             <Link href="/inspirations" className="btnPatch btnPatch--coffee">
-              + 添加灵感
+              {texts.inspListAdd}
             </Link>
           </div>
         ) : bubbles.length > 0 && (
@@ -445,22 +457,41 @@ export default function Home() {
                   <feDropShadow dx={0} dy={4} stdDeviation={8} floodColor="rgba(0,0,0,0.12)" />
                 </filter>
                 <pattern id="feltPattern" patternUnits="userSpaceOnUse" width={128} height={128}>
-                  <image href="/knitknit/texture/felt-cream-1024.png" width={128} height={128} preserveAspectRatio="xMidYMid slice" />
+                  <image href="texture/felt-cream-1024.png" width={128} height={128} preserveAspectRatio="xMidYMid slice" />
+                </pattern>
+                <pattern id="feltPinkPattern" patternUnits="userSpaceOnUse" width={128} height={128}>
+                  <image href="texture/felt-pink-1024.png" width={128} height={128} preserveAspectRatio="xMidYMid slice" />
+                </pattern>
+                <pattern id="stitchPattern" patternUnits="userSpaceOnUse" width={12} height={12} patternTransform="rotate(18)">
+                  <path d="M 0 6 L 8 6" stroke="rgba(104,78,116,0.38)" strokeWidth="2" strokeLinecap="round" />
                 </pattern>
               </defs>
 
 
 
-              {linkLines.map((line, idx) => (
-                <line key={idx} x1={line.x1} y1={line.y1} x2={line.x2} y2={line.y2} stroke="rgba(47,95,158,0.22)" strokeWidth={1.5} />
-              ))}
+              {linkLines.map((line, idx) => {
+                const midX = (line.x1 + line.x2) / 2;
+                const midY = (line.y1 + line.y2) / 2 - 18;
+                const d = `M ${line.x1} ${line.y1} Q ${midX} ${midY} ${line.x2} ${line.y2}`;
+                return (
+                  <g key={idx}>
+                    <path d={d} fill="none" stroke="rgba(80,61,89,0.12)" strokeWidth={8} strokeLinecap="round" />
+                    <path d={d} fill="none" stroke="url(#stitchPattern)" strokeWidth={5} strokeLinecap="round" opacity={0.9} />
+                    <path d={d} fill="none" stroke="rgba(112,82,122,0.28)" strokeWidth={1.2} strokeDasharray="5 8" strokeLinecap="round" />
+                  </g>
+                );
+              })}
 
               {bubbles.map((b) => {
                 return (
                 <g
                   key={b.id}
                   className="cursor-pointer"
-                  style={{ opacity: hoveredId && hoveredId !== b.id ? 0.35 : 1 }}
+                  transform={hoveredId === b.id ? `translate(${b.baseX} ${b.baseY}) scale(1.08) translate(${-b.baseX} ${-b.baseY})` : undefined}
+                  style={{
+                    opacity: hoveredId && hoveredId !== b.id ? 0.42 : 1,
+                    transition: "opacity 180ms ease, transform 180ms ease",
+                  }}
                   onMouseEnter={() => setHoveredId(b.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   onClick={() => handleClickNav(b.href)}
@@ -470,11 +501,13 @@ export default function Home() {
                     <>
                       <clipPath id={`cy-${b.id}`}><circle cx={b.baseX} cy={b.baseY} r={b.r} /></clipPath>
                       <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="url(#feltPattern)" filter="url(#yarnShadow)" />
-                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} fillOpacity={0.55} />
-                      {hoveredId === b.id && b.image ? (
-                        <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={0.85} />
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} fillOpacity={0.48} />
+                      <circle cx={b.baseX - b.r * 0.22} cy={b.baseY - b.r * 0.24} r={b.r * 0.46} fill="rgba(255,255,255,0.22)" />
+                      {b.image ? (
+                        <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={hoveredId === b.id ? 0.72 : 0.18} />
                       ) : null}
-                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="none" stroke="rgba(255,255,255,0.85)" strokeWidth={2} />
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r - 2} fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth={2.2} strokeDasharray="2 5" strokeLinecap="round" />
+                      <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="none" stroke="rgba(82,62,74,0.16)" strokeWidth={1.5} />
                       {showBubbleText && (
                         <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.4)} textAnchor="middle" fill="#2B2B2B" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 1px rgba(255,255,255,0.5)" }}>
                           {b.label.length > 8 ? b.label.slice(0, 7) + "…" : b.label}
@@ -483,15 +516,16 @@ export default function Home() {
                     </>
                   ) : (
                     <>
-                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} fill="#f5efe6" filter="url(#feltShadow)" />
-                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} fill="none" stroke="rgba(47,95,158,0.4)" strokeWidth={2} strokeDasharray="4 3" />
-                      {hoveredId === b.id && b.image ? (
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} fill="url(#feltPinkPattern)" filter="url(#feltShadow)" />
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} fill="rgba(255,250,241,0.54)" />
+                      {b.image ? (
                         <>
-                          <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} /></clipPath>
-                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={0.85} />
+                          <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} /></clipPath>
+                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={hoveredId === b.id ? 0.78 : 0.22} />
                         </>
                       ) : null}
-                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(6, Math.round(r * 0.35))} fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} />
+                      <rect x={b.baseX - b.r + 2} y={b.baseY - b.r + 2} width={b.r * 2 - 4} height={b.r * 2 - 4} rx={Math.max(8, Math.round(r * 0.28))} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={1.6} strokeDasharray="3 5" />
+                      <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} fill="none" stroke="rgba(88,64,98,0.18)" strokeWidth={1.5} />
                       {showBubbleText && (
                         <text x={b.baseX} y={b.baseY + Math.round(textFontSize * 0.35)} textAnchor="middle" fill="#2B2B2B" fontSize={textFontSize} fontWeight="bold" style={{ textShadow: "0 1px 1px rgba(255,255,255,0.5)" }}>
                           {b.label.length > 8 ? b.label.slice(0, 7) + "…" : b.label}
@@ -507,12 +541,12 @@ export default function Home() {
         )}
 
         {hoveredBubble && (
-          <div className="fixed z-50 bg-white rounded-[16px] shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.2)] px-3 py-2 pointer-events-none" style={{
+          <div className="felt-card fixed z-50 px-3 py-2 pointer-events-none max-w-[180px]" style={{
             left: Math.min(mousePos.x + 14, window.innerWidth - 160),
             top: Math.max(mousePos.y - 50, 8),
           }}>
             {hoveredBubble.image && (
-              <img src={hoveredBubble.image} alt={hoveredBubble.label} className="w-full h-20 object-cover rounded-lg mb-1.5" />
+              <img src={hoveredBubble.image} alt={hoveredBubble.label} className="w-full h-20 object-cover rounded-lg mb-1.5" referrerPolicy="no-referrer" />
             )}
             <div className="flex items-center gap-1.5">
               {hoveredBubble.type === "yarn" ? (
@@ -530,8 +564,8 @@ export default function Home() {
       </div>
 
       {/* action buttons */}
-      <section className="text-center shrink-0 pb-4 pt-0">
-        <div className="flex justify-center gap-3">
+      <section className="text-center shrink-0 pb-3 sm:pb-4 pt-0 px-3">
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
           <Link href="/yarns" className="btnPatch btnPatch--white">
             {texts.homeManageYarns}
           </Link>

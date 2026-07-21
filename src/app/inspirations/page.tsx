@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useInspirationStore, useYarnStore } from "@/lib/store";
-import { texts } from "@/lib/texts";
+import { useTexts } from "@/lib/language";
 import Link from "next/link";
 import InspirationForm from "@/components/InspirationForm";
 
 export default function InspirationsPage() {
+  const texts = useTexts();
   const { inspirations, loading, fetchInspirations, deleteInspiration } = useInspirationStore();
   const { yarns, fetchYarns } = useYarnStore();
   const [showForm, setShowForm] = useState(false);
@@ -30,8 +31,8 @@ export default function InspirationsPage() {
   return (
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-4 sm:py-6">
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#2B2B2B]">{texts.inspListHeading}</h1>
+      <div className="flex flex-col min-[420px]:flex-row min-[420px]:items-center justify-between gap-3 mb-5 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-[#2B2B2B]">{texts.inspListHeading}</h1>
         <button onClick={() => setShowForm(true)} className="btnPatch btnPatch--coffee">
           {texts.inspListAdd}
         </button>
@@ -68,7 +69,7 @@ export default function InspirationsPage() {
               "Pinterest": "bg-red-100 text-red-700",
             };
             return (
-              <div key={insp.id} className="bg-[#FFFAF1] rounded-[16px] border border-[rgba(47,95,158,0.15)] shadow-[0_8px_24px_rgba(0,0,0,0.12)] hover:shadow-xl transition group">
+              <div key={insp.id} className="felt-card hover:shadow-xl transition group">
                 <Link href={`/inspiration-detail?id=${insp.id}`} className="block p-4">
                   {insp.image ? (
                     <img src={insp.image} alt={insp.title} className="w-full h-40 object-cover rounded-[16px] mb-3" referrerPolicy="no-referrer" />

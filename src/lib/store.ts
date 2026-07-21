@@ -17,22 +17,22 @@ export const useYarnStore = create<YarnStore>((set) => ({
   loading: false,
   fetchYarns: async () => {
     set({ loading: true });
-    const yarns = local.getAllYarns();
+    const yarns = await local.getAllYarns();
     set({ yarns, loading: false });
   },
   createYarn: async (input) => {
-    const yarn = local.createYarn(input);
-    set({ yarns: local.getAllYarns() });
+    const yarn = await local.createYarn(input);
+    set({ yarns: await local.getAllYarns() });
     return yarn;
   },
   updateYarn: async (id, input) => {
-    const yarn = local.updateYarn(id, input);
-    if (yarn) set({ yarns: local.getAllYarns() });
+    const yarn = await local.updateYarn(id, input);
+    if (yarn) set({ yarns: await local.getAllYarns() });
     return yarn;
   },
   deleteYarn: async (id) => {
-    local.deleteYarn(id);
-    set({ yarns: local.getAllYarns() });
+    await local.deleteYarn(id);
+    set({ yarns: await local.getAllYarns() });
   },
 }));
 
@@ -50,27 +50,27 @@ export const useInspirationStore = create<InspirationStore>((set) => ({
   loading: false,
   fetchInspirations: async () => {
     set({ loading: true });
-    const inspirations = local.getAllInspirations();
+    const inspirations = await local.getAllInspirations();
     set({ inspirations, loading: false });
   },
   createInspiration: async (input) => {
-    const insp = local.createInspiration(input);
-    set({ inspirations: local.getAllInspirations() });
+    const insp = await local.createInspiration(input);
+    set({ inspirations: await local.getAllInspirations() });
     return insp;
   },
   updateInspiration: async (id, input) => {
-    const insp = local.updateInspiration(id, input);
-    if (insp) set({ inspirations: local.getAllInspirations() });
+    const insp = await local.updateInspiration(id, input);
+    if (insp) set({ inspirations: await local.getAllInspirations() });
     return insp;
   },
   deleteInspiration: async (id) => {
-    local.deleteInspiration(id);
-    set({ inspirations: local.getAllInspirations() });
+    await local.deleteInspiration(id);
+    set({ inspirations: await local.getAllInspirations() });
   },
 }));
 
 export async function exportData(): Promise<void> {
-  const store = local.getFullStore();
+  const store = await local.getFullStore();
   const json = JSON.stringify(store, null, 2);
   const blob = new Blob([json], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -87,5 +87,5 @@ export async function importData(file: File): Promise<void> {
   if (!data.yarns || !data.inspirations || typeof data.nextYarnId !== "number") {
     throw new Error("invalid format");
   }
-  local.importStore(data);
+  await local.importStore(data);
 }

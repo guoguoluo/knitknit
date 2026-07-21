@@ -1,5 +1,6 @@
 @echo off
-cd /d "F:\BrainChild"
+set SCRIPT_DIR=%~dp0
+cd /d "%SCRIPT_DIR%"
 start "Next.js Dev" cmd /c "npm run dev"
 echo Waiting for Next.js...
 :waitloop

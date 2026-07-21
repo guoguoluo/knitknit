@@ -1,117 +1,275 @@
 "use client";
-import { useState, useRef } from "react";
+
+import { useCallback, useRef, useState } from "react";
 import { useYarnStore } from "@/lib/store";
+import { texts as baseTexts } from "@/lib/texts";
+import { useTexts } from "@/lib/language";
 
 interface Props {
   onClose: () => void;
-  initial?: { id: number; name: string; brand: string; color: string; material: string; weight: string; quantity: number; unit: string; notes: string; photo: string; tags: string[]; colors: string[] };
+  initial?: {
+    id: number;
+    name: string;
+    brand: string;
+    color: string;
+    material: string;
+    weight: string;
+    quantity: number;
+    unit: string;
+    notes: string;
+    photo: string;
+    tags: string[];
+    colors: string[];
+  };
 }
 
-const KNOWN_MATERIALS = ["羊毛", "棉", "亚麻", "丝", "羊绒", "马海毛", "腈纶", "尼龙", "竹纤维", "羊驼毛", "美利奴", "真丝"];
+type Rgb = [number, number, number];
+
+function rgbDistance(a: Rgb, b: Rgb): number {
+  const dr = a[0] - b[0];
+  const dg = a[1] - b[1];
+  const db = a[2] - b[2];
+  return Math.sqrt(dr * dr * 0.9 + dg * dg * 1.2 + db * db * 0.9);
+}
+
+function rgbToHex([r, g, b]: Rgb): string {
+  return `#${Math.round(r).toString(16).padStart(2, "0")}${Math.round(g).toString(16).padStart(2, "0")}${Math.round(b).toString(16).padStart(2, "0")}`;
+}
+
+function getImageData(img: HTMLImageElement, maxW = 720): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D; imageData: ImageData } {
+  const scale = Math.min(1, maxW / img.naturalWidth);
+  const width = Math.max(1, Math.round(img.naturalWidth * scale));
+  const height = Math.max(1, Math.round(img.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true })!;
+  ctx.drawImage(img, 0, 0, width, height);
+  return { canvas, ctx, imageData: ctx.getImageData(0, 0, width, height) };
+}
+
+function estimateBackground(data: Uint8ClampedArray, width: number, height: number): Rgb {
+  const buckets = new Map<string, { rgb: Rgb; count: number }>();
+  const add = (x: number, y: number) => {
+    const i = (y * width + x) * 4;
+    const r = Math.round(data[i] / 16) * 16;
+    const g = Math.round(data[i + 1] / 16) * 16;
+    const b = Math.round(data[i + 2] / 16) * 16;
+    const key = `${r},${g},${b}`;
+    const item = buckets.get(key) || { rgb: [0, 0, 0], count: 0 };
+    item.rgb[0] += data[i];
+    item.rgb[1] += data[i + 1];
+    item.rgb[2] += data[i + 2];
+    item.count += 1;
+    buckets.set(key, item);
+  };
+
+  const step = Math.max(1, Math.floor(Math.min(width, height) / 90));
+  for (let x = 0; x < width; x += step) {
+    add(x, 0);
+    add(x, height - 1);
+  }
+  for (let y = 0; y < height; y += step) {
+    add(0, y);
+    add(width - 1, y);
+  }
+
+  const winner = Array.from(buckets.values()).sort((a, b) => b.count - a.count)[0];
+  if (!winner) return [255, 255, 255];
+  return winner.rgb.map((v) => v / winner.count) as Rgb;
+}
 
 function removeBackground(img: HTMLImageElement): string {
-  const cw = 400;
-  const ch = Math.round((img.naturalHeight / img.naturalWidth) * cw);
-  const canvas = document.createElement("canvas");
-  canvas.width = cw;
-  canvas.height = ch;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, cw, ch);
-  const { data, width, height } = ctx.getImageData(0, 0, cw, ch);
-
+  const { canvas, ctx, imageData } = getImageData(img);
+  const { data, width, height } = imageData;
+  const bg = estimateBackground(data, width, height);
+  const bgMask = new Uint8Array(width * height);
   const visited = new Uint8Array(width * height);
-  const isBg: number[] = [];
-
-  const samplePixels: number[] = [];
-  for (let y = 0; y < 3; y++) {
-    for (let x = 0; x < width; x += 4) {
-      samplePixels.push(y * width + x);
-    }
-  }
-  for (let x = 0; x < width; x += 4) {
-    samplePixels.push((height - 1) * width + x);
-  }
-  for (let y = 0; y < height; y += 4) {
-    samplePixels.push(y * width);
-    samplePixels.push(y * width + width - 1);
-  }
-
-  let rAcc = 0, gAcc = 0, bAcc = 0, cnt = 0;
-  for (const idx of samplePixels) {
-    const i = idx * 4;
-    rAcc += data[i]; gAcc += data[i + 1]; bAcc += data[i + 2];
-    cnt++;
-  }
-  const bgR = rAcc / cnt, bgG = gAcc / cnt, bgB = bAcc / cnt;
-  const threshold = 55;
-
   const stack: number[] = [];
-  for (const idx of samplePixels) {
+  const threshold = 48;
+  const softThreshold = 72;
+
+  const push = (x: number, y: number) => {
+    const idx = y * width + x;
     if (!visited[idx]) {
       visited[idx] = 1;
       stack.push(idx);
     }
+  };
+
+  for (let x = 0; x < width; x++) {
+    push(x, 0);
+    push(x, height - 1);
   }
+  for (let y = 0; y < height; y++) {
+    push(0, y);
+    push(width - 1, y);
+  }
+
   while (stack.length) {
     const idx = stack.pop()!;
     const i = idx * 4;
-    const dr = data[i] - bgR, dg = data[i + 1] - bgG, db = data[i + 2] - bgB;
-    const dist = Math.sqrt(dr * dr + dg * dg + db * db);
-    if (dist < threshold) {
-      isBg.push(idx);
+    const current: Rgb = [data[i], data[i + 1], data[i + 2]];
+    if (rgbDistance(current, bg) > threshold) continue;
+    bgMask[idx] = 1;
+    const x = idx % width;
+    const y = Math.floor(idx / width);
+    if (x > 0) push(x - 1, y);
+    if (x < width - 1) push(x + 1, y);
+    if (y > 0) push(x, y - 1);
+    if (y < height - 1) push(x, y + 1);
+  }
+
+  for (let idx = 0; idx < width * height; idx++) {
+    const i = idx * 4;
+    const current: Rgb = [data[i], data[i + 1], data[i + 2]];
+    const dist = rgbDistance(current, bg);
+    if (bgMask[idx]) {
       data[i + 3] = 0;
-      const x = idx % width, y = Math.floor(idx / width);
-      for (const [nx, ny] of [[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]]) {
-        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-          const ni = ny * width + nx;
-          if (!visited[ni]) { visited[ni] = 1; stack.push(ni); }
-        }
-      }
+    } else if (dist < softThreshold) {
+      data[i + 3] = Math.min(data[i + 3], Math.round(((dist - threshold) / (softThreshold - threshold)) * 255));
     }
   }
-  ctx.putImageData(ctx.getImageData(0, 0, cw, ch), 0, 0);
+
+  ctx.putImageData(imageData, 0, 0);
   return canvas.toDataURL("image/png");
 }
 
 function extractDominantColors(img: HTMLImageElement): string[] {
-  const canvas = document.createElement("canvas");
-  canvas.width = 100;
-  canvas.height = 100;
-  const ctx = canvas.getContext("2d")!;
-  ctx.drawImage(img, 0, 0, 100, 100);
-  const { data } = ctx.getImageData(0, 0, 100, 100);
-  const colorMap = new Map<string, number>();
+  const { imageData } = getImageData(img, 240);
+  const { data } = imageData;
+  const samples: Rgb[] = [];
+
   for (let i = 0; i < data.length; i += 16) {
-    if (data[i + 3] < 128) continue;
-    const r = Math.round(data[i] / 32) * 32;
-    const g = Math.round(data[i + 1] / 32) * 32;
-    const b = Math.round(data[i + 2] / 32) * 32;
-    const key = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-    colorMap.set(key, (colorMap.get(key) || 0) + 1);
+    const alpha = data[i + 3];
+    if (alpha < 96) continue;
+    samples.push([data[i], data[i + 1], data[i + 2]]);
   }
-  return Array.from(colorMap.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([color]) => color);
+
+  if (samples.length === 0) return [];
+
+  const buckets = new Map<string, { rgb: Rgb; count: number }>();
+  for (const sample of samples) {
+    const key = sample.map((value) => Math.round(value / 24) * 24).join(",");
+    const bucket = buckets.get(key) || { rgb: [0, 0, 0], count: 0 };
+    bucket.rgb[0] += sample[0];
+    bucket.rgb[1] += sample[1];
+    bucket.rgb[2] += sample[2];
+    bucket.count += 1;
+    buckets.set(key, bucket);
+  }
+
+  const allCandidates = Array.from(buckets.values())
+    .map((bucket) => ({
+      rgb: bucket.rgb.map((value) => value / bucket.count) as Rgb,
+      count: bucket.count,
+    }))
+    .sort((a, b) => b.count - a.count);
+
+  const candidates = allCandidates
+    .filter((bucket) => bucket.count >= Math.max(4, samples.length * 0.003))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 28);
+
+  if (candidates.length === 0) candidates.push(...allCandidates.slice(0, 12));
+
+  const centers: Rgb[] = [];
+  for (const candidate of candidates) {
+    const nearest = centers.length === 0
+      ? Infinity
+      : Math.min(...centers.map((center) => rgbDistance(center, candidate.rgb)));
+    if (nearest > 26 || centers.length < Math.min(3, candidates.length)) {
+      centers.push([...candidate.rgb] as Rgb);
+    }
+    if (centers.length >= 6) break;
+  }
+
+  while (centers.length < Math.min(4, candidates.length)) {
+    const next = candidates
+      .filter((candidate) => centers.every((center) => rgbDistance(center, candidate.rgb) > 14))
+      .sort((a, b) => {
+        const aDist = Math.min(...centers.map((center) => rgbDistance(center, a.rgb)));
+        const bDist = Math.min(...centers.map((center) => rgbDistance(center, b.rgb)));
+        return bDist * Math.log(b.count + 1) - aDist * Math.log(a.count + 1);
+      })[0];
+    if (!next) break;
+    centers.push([...next.rgb] as Rgb);
+  }
+
+  for (let iter = 0; iter < 8; iter++) {
+    const sums = centers.map(() => ({ rgb: [0, 0, 0] as Rgb, count: 0 }));
+    for (const sample of samples) {
+      let best = 0;
+      let bestDist = Infinity;
+      centers.forEach((center, idx) => {
+        const dist = rgbDistance(center, sample);
+        if (dist < bestDist) {
+          best = idx;
+          bestDist = dist;
+        }
+      });
+      sums[best].rgb[0] += sample[0];
+      sums[best].rgb[1] += sample[1];
+      sums[best].rgb[2] += sample[2];
+      sums[best].count += 1;
+    }
+    sums.forEach((sum, idx) => {
+      if (sum.count > 0) centers[idx] = sum.rgb.map((v) => v / sum.count) as Rgb;
+    });
+  }
+
+  const scored = centers.map((center) => {
+    const count = samples.filter((sample) => rgbDistance(sample, center) < 54).length;
+    return { color: rgbToHex(center), count };
+  });
+
+  return scored
+    .sort((a, b) => b.count - a.count)
+    .map((item) => item.color)
+    .filter((color, idx, arr) => arr.findIndex((other) => rgbDistance(hexToRgb(other), hexToRgb(color)) < 18) === idx)
+    .slice(0, 1);
+}
+
+function hexToRgb(hex: string): Rgb {
+  const normalized = hex.replace("#", "");
+  return [
+    parseInt(normalized.slice(0, 2), 16),
+    parseInt(normalized.slice(2, 4), 16),
+    parseInt(normalized.slice(4, 6), 16),
+  ];
 }
 
 function inferMaterialFromName(name: string, brand: string): string {
-  const text = `${name} ${brand}`.toLowerCase();
-  for (const m of KNOWN_MATERIALS) {
-    if (text.includes(m)) return m;
+  const source = `${name} ${brand}`.toLowerCase();
+  for (const material of baseTexts.knownMaterials) {
+    if (source.includes(material.toLowerCase())) return material;
   }
-  if (text.includes("wool") || text.includes("merino")) return "羊毛";
-  if (text.includes("cotton")) return "棉";
-  if (text.includes("silk")) return "丝";
-  if (text.includes("linen")) return "亚麻";
-  if (text.includes("alpaca")) return "羊驼毛";
-  if (text.includes("mohair")) return "马海毛";
-  if (text.includes("acrylic")) return "腈纶";
-  if (text.includes("nylon")) return "尼龙";
+  for (const [needle, material] of Object.entries(baseTexts.materialMap)) {
+    if (source.includes(needle)) return material;
+  }
   return "";
 }
 
+async function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(url: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+
 export default function YarnForm({ onClose, initial }: Props) {
+  const texts = useTexts();
   const { createYarn, updateYarn } = useYarnStore();
   const [name, setName] = useState(initial?.name || "");
   const [brand, setBrand] = useState(initial?.brand || "");
@@ -127,133 +285,180 @@ export default function YarnForm({ onClose, initial }: Props) {
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [newColorHex, setNewColorHex] = useState("#d946ef");
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const processImageDataUrl = useCallback(async (dataUrl: string) => {
+    setUploading(true);
+    setAnalyzing(true);
+    try {
+      const sourceImg = await loadImage(dataUrl);
+      const cleaned = removeBackground(sourceImg);
+      setPhoto(cleaned);
+      const cleanedImg = await loadImage(cleaned);
+      const [dominantColor] = extractDominantColors(cleanedImg);
+      if (dominantColor) {
+        setColor(dominantColor);
+        setNewColorHex(dominantColor);
+      }
+
+      const detectedMaterial = inferMaterialFromName(name, brand);
+      if (detectedMaterial && !material) setMaterial(detectedMaterial);
+    } finally {
+      setUploading(false);
+      setAnalyzing(false);
+    }
+  }, [brand, material, name]);
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-
-    const img = new Image();
-    img.onload = () => {
-      const cleaned = removeBackground(img);
-      setPhoto(cleaned);
-      setUploading(false);
-      if (!initial) analyzeImage(cleaned);
-    };
-    img.src = dataUrl;
+    await processImageDataUrl(await readFileAsDataUrl(file));
+    e.target.value = "";
   };
 
-  const analyzeImage = (url: string) => {
-    setAnalyzing(true);
-    const img = new Image();
-    img.onload = () => {
-      const hexColors = extractDominantColors(img);
-      setColors(prev => {
-        const existing = new Set(prev);
-        const added = hexColors.filter(c => !existing.has(c));
-        return [...prev, ...added].slice(0, 8);
-      });
-      if (hexColors.length > 0 && !color) setColor(hexColors[0]);
-      const detectedMaterial = inferMaterialFromName(name, brand);
-      if (detectedMaterial && !material) setMaterial(detectedMaterial);
-      setAnalyzing(false);
-    };
-    img.onerror = () => setAnalyzing(false);
-    img.src = url;
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const imageFile = Array.from(e.clipboardData.files).find((file) => file.type.startsWith("image/"))
+      || Array.from(e.clipboardData.items)
+        .find((item) => item.type.startsWith("image/"))
+        ?.getAsFile();
+    if (!imageFile) return;
+    e.preventDefault();
+    await processImageDataUrl(await readFileAsDataUrl(imageFile));
   };
 
-  const addColor = () => {
-    setColors(prev => {
-      if (prev.includes(newColorHex)) return prev;
-      return [...prev, newColorHex];
-    });
+  const setMainColor = (hex: string) => {
+    setColor(hex);
+    setNewColorHex(hex);
+  };
+
+  const addColor = (hex: string) => {
+    setNewColorHex(hex);
+    setColors((prev) => prev.some((existing) => rgbDistance(hexToRgb(existing), hexToRgb(hex)) < 12) ? prev : [...prev, hex]);
+    if (!color) setColor(hex);
   };
 
   const removeColor = (idx: number) => {
-    setColors(prev => prev.filter((_, i) => i !== idx));
+    setColors((prev) => prev.filter((_, i) => i !== idx));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
-      name, brand, color, colors,
-      material, weight,
-      quantity: Number(quantity), unit,
-      notes, photo,
-      tags: tagsStr.split(",").map(s => s.trim()).filter(Boolean),
+      name,
+      brand,
+      color,
+      colors,
+      material,
+      weight,
+      quantity: Number(quantity),
+      unit,
+      notes,
+      photo,
+      tags: tagsStr.split(",").map((s) => s.trim()).filter(Boolean),
     };
-    if (initial) {
-      await updateYarn(initial.id, data);
-    } else {
-      await createYarn(data);
-    }
+    if (initial) await updateYarn(initial.id, data);
+    else await createYarn(data);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="card-yarn rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
+    <div className="modalOverlay" onPaste={handlePaste}>
+      <div className="modalPanel card-yarn felt-card p-4 sm:p-6 w-full max-w-xl">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-[#2B2B2B]">{initial ? "编辑毛线" : "添加毛线"}</h2>
+          <h2 className="text-xl font-bold text-[#2B2B2B]">{initial ? texts.yarnFormEditTitle : texts.yarnFormAddTitle}</h2>
           <button onClick={onClose} className="text-[#6B6B6B] hover:text-[#2B2B2B] text-xl">&times;</button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input required placeholder="名称 *" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none focus:ring-2 focus:ring-[rgba(47,95,158,0.3)] text-[#2B2B2B]" value={name} onChange={e => setName(e.target.value)} />
-          <input placeholder="品牌" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none focus:ring-2 focus:ring-[rgba(47,95,158,0.3)] text-[#2B2B2B]" value={brand} onChange={e => setBrand(e.target.value)} />
-          <div className="flex gap-3">
-            <input placeholder="主颜色" className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={color} onChange={e => setColor(e.target.value)} />
-            <input type="color" className="w-10 h-10 rounded-[16px] border border-[rgba(47,95,158,0.2)] cursor-pointer" value={color || "#d946ef"} onChange={e => setColor(e.target.value)} />
+          <input required placeholder={texts.yarnFormName} className="felt-input" value={name} onChange={(e) => setName(e.target.value)} />
+          <input placeholder={texts.yarnFormBrand} className="felt-input" value={brand} onChange={(e) => setBrand(e.target.value)} />
+
+          <div className="flex gap-3 items-stretch">
+            <input placeholder={texts.yarnFormMainColor} className="felt-input flex-1 min-w-0" value={color} onChange={(e) => setColor(e.target.value)} />
+            <label
+              className={`colorAddControl colorAddControl--main${color ? "" : " colorAddControl--empty"}`}
+              style={color ? { backgroundColor: color } : undefined}
+              title={texts.yarnFormMainColor}
+            >
+              <input
+                type="color"
+                value={color && /^#[0-9a-f]{6}$/i.test(color) ? color : newColorHex}
+                onChange={(e) => setMainColor(e.target.value)}
+                aria-label={texts.yarnFormMainColor}
+              />
+              {!color && <span aria-hidden="true">+</span>}
+            </label>
           </div>
 
-          <div>
-            <label className="block text-sm text-[#6B6B6B] mb-1">多种颜色（可选）</label>
-            <div className="flex flex-wrap gap-1.5 mb-2">
-              {colors.map((c, i) => (
-                <span key={i} className="inline-flex items-center gap-1">
-                  <span className="inline-block w-6 h-6 rounded-full border border-gray-300" style={{ backgroundColor: c }} />
-                  <button type="button" onClick={() => removeColor(i)} className="text-[#6B6B6B] hover:text-red-600 text-xs">&times;</button>
-                </span>
-              ))}
+          {colors.length > 0 && (
+            <div>
+              <label className="block text-sm text-[#6B6B6B] mb-1">{texts.yarnFormMultiColor}</label>
+              <div className="space-y-2">
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((c, i) => (
+                    <button
+                      key={`${c}-${i}`}
+                      type="button"
+                      onClick={() => removeColor(i)}
+                      className="colorChip"
+                      style={{ backgroundColor: c }}
+                      title={texts.yarnFormRemoveColorTitle(c)}
+                    />
+                  ))}
+                  <label
+                    className="colorAddControl"
+                    style={{ backgroundColor: newColorHex }}
+                    title={texts.yarnFormAddColor}
+                  >
+                    <input
+                      type="color"
+                      value={newColorHex}
+                      onChange={(e) => addColor(e.target.value)}
+                      aria-label={texts.yarnFormAddColor}
+                    />
+                    <span aria-hidden="true">+</span>
+                  </label>
+                </div>
+              </div>
+              {analyzing && <p className="text-xs text-[#6B6B6B] mt-1">{texts.yarnFormAnalyzing}</p>}
             </div>
-            <div className="flex gap-2">
-              <input type="color" className="w-9 h-9 rounded-lg border border-[rgba(47,95,158,0.2)] cursor-pointer" value={newColorHex} onChange={e => setNewColorHex(e.target.value)} />
-              <button type="button" onClick={addColor} className="px-3 py-1 text-xs rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.2)] hover:shadow-lg transition">添加色块</button>
-            </div>
-            {analyzing && <p className="text-xs text-[#6B6B6B] mt-1">正在从图片识别颜色...</p>}
-          </div>
+          )}
+          {colors.length === 0 && analyzing && <p className="text-xs text-[#6B6B6B] mt-1">{texts.yarnFormAnalyzing}</p>}
 
-          <input placeholder="材质（如：羊毛、棉、亚麻）" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={material} onChange={e => setMaterial(e.target.value)} />
-          <div className="flex gap-3">
-            <input type="number" placeholder="数量" className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={quantity} onChange={e => setQuantity(Number(e.target.value))} />
-            <select className="px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 text-[#2B2B2B]" value={unit} onChange={e => setUnit(e.target.value)}>
-              <option value="g">克(g)</option><option value="m">米(m)</option>
-              <option value="个">个</option><option value="团">团</option>
+          <input placeholder={texts.yarnFormMaterial} className="felt-input" value={material} onChange={(e) => setMaterial(e.target.value)} />
+          <div className="flex flex-col min-[420px]:flex-row gap-3">
+            <input type="number" placeholder={texts.yarnFormQty} className="felt-input flex-1 min-w-0" value={quantity} onChange={(e) => setQuantity(Number(e.target.value))} />
+            <select className="felt-input min-[420px]:w-32" value={unit} onChange={(e) => setUnit(e.target.value)}>
+              <option value="g">{texts.yarnFormUnitG}</option>
+              <option value="m">{texts.yarnFormUnitM}</option>
+              <option value="个">{texts.yarnFormUnitPiece}</option>
+              <option value="团">{texts.yarnFormUnitBall}</option>
             </select>
           </div>
-          <input placeholder="标签（用逗号分隔，如：粗线, 暖色, 冬季）" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={tagsStr} onChange={e => setTagsStr(e.target.value)} />
-          <textarea placeholder="备注信息" rows={3} className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={notes} onChange={e => setNotes(e.target.value)} />
+          <input placeholder={texts.yarnFormTags} className="felt-input" value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} />
+          <textarea placeholder={texts.yarnFormNotes} rows={3} className="felt-input" value={notes} onChange={(e) => setNotes(e.target.value)} />
+
           <div>
-            <label className="block text-sm text-[#6B6B6B] mb-1">照片（上传后自动去背景、识别颜色）</label>
-            <input type="file" accept="image/*" onChange={handlePhoto} className="text-sm" />
-            {uploading && <span className="text-xs text-[#6B6B6B] ml-2">处理中...</span>}
-            {photo && (
-              <div className="mt-2 relative inline-block">
-                <img src={photo} alt="preview" className="w-28 h-28 object-contain rounded-[16px] border border-[rgba(47,95,158,0.2)]" />
-              </div>
-            )}
+            <label className="block text-sm text-[#6B6B6B] mb-1">{texts.yarnFormPhoto}</label>
+            <div
+              className="felt-upload"
+              onClick={() => fileRef.current?.click()}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") fileRef.current?.click(); }}
+            >
+              {photo ? (
+                <img src={photo} alt="preview" className="max-h-44 w-full object-contain" />
+              ) : (
+                <span>{texts.yarnFormPasteHint}</span>
+              )}
+            </div>
+            <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" style={{ display: "none" }} />
+            {uploading && <span className="text-xs text-[#6B6B6B] mt-1 inline-block">{texts.yarnFormProcessing}</span>}
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit" className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
-              {initial ? "保存" : "添加"}
-            </button>
-            <button type="button" onClick={onClose} className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">取消</button>
+
+          <div className="flex flex-col min-[420px]:flex-row gap-3 pt-2">
+            <button type="submit" className="felt-control min-[420px]:min-w-24">{initial ? texts.yarnFormSave : texts.yarnFormAdd}</button>
+            <button type="button" onClick={onClose} className="felt-control min-[420px]:min-w-24">{texts.yarnFormCancel}</button>
           </div>
         </form>
       </div>

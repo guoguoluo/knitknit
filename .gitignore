@@ -1,15 +1,17 @@
 node_modules/
 .next/
+out/
+knit/
+release/
+dist/
 data/
 public/uploads/
+*.log
 .env
 .env.local
-*.tsbuildinfo
-
-.vercel
-
-# Local Netlify folder
-.netlify
-
-# Static export output
-out/
+.env.*.local
+Thumbs.db
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

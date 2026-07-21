@@ -1,9 +1,11 @@
 "use client";
-import { exportData, importData } from "@/lib/store";
-import { texts } from "@/lib/texts";
+
 import { useRef } from "react";
+import { exportData, importData } from "@/lib/store";
+import { useTexts } from "@/lib/language";
 
 export default function DataActions() {
+  const texts = useTexts();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const handleExport = async () => {
@@ -28,18 +30,24 @@ export default function DataActions() {
   };
 
   return (
-    <div className="flex gap-0.5 items-center shrink-0">
+    <div className="flex gap-0.5 items-center shrink-0" aria-label="Data actions">
       <button
         onClick={handleExport}
-        className="text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition px-1"
+        className="text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition px-1.5 leading-none"
         title={texts.exportData}
-      >⬇</button>
+        aria-label={texts.exportData}
+      >
+        {"\u2B07"}
+      </button>
       <button
         onClick={() => fileRef.current?.click()}
-        className="text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition px-1"
+        className="text-sm text-[#6B6B6B] hover:text-[#2B2B2B] transition px-1.5 leading-none"
         title={texts.importData}
-      >⬆</button>
-      <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
+        aria-label={texts.importData}
+      >
+        {"\u2B06"}
+      </button>
+      <input ref={fileRef} type="file" accept=".json" onChange={handleImport} className="hidden" style={{ display: "none" }} />
     </div>
   );
 }

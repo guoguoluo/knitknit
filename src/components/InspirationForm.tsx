@@ -1,14 +1,27 @@
 "use client";
-import { useState, useRef } from "react";
+
+import { useEffect, useRef, useState } from "react";
 import { useInspirationStore, useYarnStore } from "@/lib/store";
 import { cleanUrl, scrapeUrl } from "@/lib/scrape";
+import { useTexts } from "@/lib/language";
 
 interface Props {
   onClose: () => void;
-  initial?: { id: number; title: string; url: string; platform: string; image: string; notes: string; yarn_id: number | null; tags: string[]; pattern: string };
+  initial?: {
+    id: number;
+    title: string;
+    url: string;
+    platform: string;
+    image: string;
+    notes: string;
+    yarn_id: number | null;
+    tags: string[];
+    pattern: string;
+  };
 }
 
 export default function InspirationForm({ onClose, initial }: Props) {
+  const texts = useTexts();
   const { createInspiration, updateInspiration } = useInspirationStore();
   const { yarns } = useYarnStore();
   const [title, setTitle] = useState(initial?.title || "");
@@ -24,6 +37,7 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState("");
   const abortRef = useRef<AbortController | null>(null);
+  const lastScrapedRef = useRef(initial?.url || "");
 
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -60,12 +74,13 @@ export default function InspirationForm({ onClose, initial }: Props) {
       if (data.title) setTitle(data.title);
       if (data.platform) setPlatform(data.platform);
       if (data.images?.length > 0) setImage(data.images[0]);
-      else setScrapeError("未能自动抓取到封面图片，可手动上传");
+      else setScrapeError(texts.inspFormScrapeFail);
     } catch {
-      if (!controller.signal.aborted) setScrapeError("抓取失败，可手动填写");
+      if (!controller.signal.aborted) setScrapeError(texts.inspFormScrapeError);
+    } finally {
+      if (!controller.signal.aborted) setScraping(false);
+      if (abortRef.current === controller) abortRef.current = null;
     }
-    setScraping(false);
-    if (abortRef.current === controller) abortRef.current = null;
   };
 
   const handleUrlChange = (value: string) => {
@@ -76,119 +91,138 @@ export default function InspirationForm({ onClose, initial }: Props) {
     const cleaned = cleanUrl(url);
     if (!cleaned.startsWith("http")) return;
     setUrl(cleaned);
+    lastScrapedRef.current = cleaned;
     doScrape(cleaned);
   };
+
+  useEffect(() => {
+    if (initial) return;
+    const cleaned = cleanUrl(url);
+    if (!cleaned.startsWith("http") || cleaned === lastScrapedRef.current) return;
+    const timeout = window.setTimeout(() => {
+      lastScrapedRef.current = cleaned;
+      setUrl(cleaned);
+      doScrape(cleaned);
+    }, 650);
+    return () => window.clearTimeout(timeout);
+  }, [initial, url]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const data = {
-      title, url, platform, notes, image, pattern,
+      title,
+      url,
+      platform,
+      notes,
+      image,
+      pattern,
       yarn_id: yarnId,
-      tags: tagsStr.split(",").map(s => s.trim()).filter(Boolean),
+      tags: tagsStr.split(",").map((s) => s.trim()).filter(Boolean),
     };
-    if (initial) {
-      await updateInspiration(initial.id, data);
-    } else {
-      await createInspiration(data);
-    }
+    if (initial) await updateInspiration(initial.id, data);
+    else await createInspiration(data);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-[#FFFAF1] rounded-[16px] p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-[0_8px_24px_rgba(0,0,0,0.12)] border border-[rgba(47,95,158,0.15)]">
+    <div className="modalOverlay">
+      <div className="modalPanel felt-card p-4 sm:p-6 w-full max-w-lg">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold text-[#2B2B2B]">{initial ? "编辑灵感" : "添加灵感"}</h2>
+          <h2 className="text-lg font-bold text-[#2B2B2B]">
+            {initial ? texts.inspFormEditTitle : texts.inspFormAddTitle}
+          </h2>
           <button onClick={onClose} className="text-[#6B6B6B] hover:text-[#2B2B2B] text-xl">&times;</button>
         </div>
+
         <form onSubmit={handleSubmit} className="space-y-3">
-          <input required placeholder="标题 *" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={title} onChange={e => setTitle(e.target.value)} />
-          <div className="relative">
-            <div className="flex gap-2">
-              <input placeholder="链接 URL" className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={url} onChange={e => handleUrlChange(e.target.value)} />
-              {url.startsWith("http") && !initial && (
-                <button type="button" onClick={handleScrapeClick} disabled={scraping}
-                  className="shrink-0 px-3 py-2 rounded-[16px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition text-sm disabled:opacity-50">
-                  {scraping ? "抓取中..." : "抓取信息"}
-                </button>
-              )}
-            </div>
+          <input required placeholder={texts.inspFormTitlePlaceholder} className="felt-input" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <div className="flex flex-col min-[420px]:flex-row gap-2">
+            <input placeholder={texts.inspFormUrlPlaceholder} className="felt-input flex-1 min-w-0" value={url} onChange={(e) => handleUrlChange(e.target.value)} />
+            {url.startsWith("http") && !initial && (
+              <button type="button" onClick={handleScrapeClick} disabled={scraping} className="felt-control shrink-0 disabled:opacity-50">
+                {scraping ? texts.inspFormScraping : texts.inspFormFetchInfo}
+              </button>
+            )}
           </div>
-          <div className="flex gap-3">
-            <select className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 text-[#2B2B2B]" value={platform} onChange={e => setPlatform(e.target.value)}>
-              <option value="">选择平台</option>
-              <option value="小红书">小红书</option>
-              <option value="Instagram">Instagram</option>
-              <option value="Ravelry">Ravelry</option>
-              <option value="Pinterest">Pinterest</option>
-              <option value="其他">其他</option>
+
+          <div className="flex flex-col min-[420px]:flex-row gap-3">
+            <select className="felt-input flex-1" value={platform} onChange={(e) => setPlatform(e.target.value)}>
+              <option value="">{texts.inspFormPlatformDefault}</option>
+              <option value="小红书">{texts.inspFormPlatformXiaohongshu}</option>
+              <option value="Instagram">{texts.inspFormPlatformInstagram}</option>
+              <option value="Ravelry">{texts.inspFormPlatformRavelry}</option>
+              <option value="Pinterest">{texts.inspFormPlatformPinterest}</option>
+              <option value="其他">{texts.inspFormPlatformOther}</option>
             </select>
-            <select className="flex-1 px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 text-[#2B2B2B]" value={yarnId ?? ""} onChange={e => setYarnId(e.target.value ? Number(e.target.value) : null)}>
-              <option value="">关联毛线（可选）</option>
-              {yarns.map(y => <option key={y.id} value={y.id}>{y.name}</option>)}
+            <select className="felt-input flex-1" value={yarnId ?? ""} onChange={(e) => setYarnId(e.target.value ? Number(e.target.value) : null)}>
+              <option value="">{texts.inspFormSelectYarn}</option>
+              {yarns.map((y) => <option key={y.id} value={y.id}>{y.name}</option>)}
             </select>
           </div>
-          <input placeholder="标签（逗号分隔，如：开衫, 麻花, 短款）" className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={tagsStr} onChange={e => setTagsStr(e.target.value)} />
-          <textarea placeholder="备注" rows={3} className="w-full px-3 py-2 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 focus:outline-none text-[#2B2B2B]" value={notes} onChange={e => setNotes(e.target.value)} />
+
+          <input placeholder={texts.inspFormTags} className="felt-input" value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} />
+          <textarea placeholder={texts.inspFormNotes} rows={3} className="felt-input" value={notes} onChange={(e) => setNotes(e.target.value)} />
+
           <div>
             <label className="block text-sm text-[#6B6B6B] mb-1">
-              参考图
+              {texts.inspFormImageLabel}
               {image && url && !initial && (
-                <span className="text-xs text-green-600 ml-2">✓ 已自动抓取封面</span>
+                <span className="text-xs text-green-700 ml-2">{texts.inspFormAutoScraped}</span>
               )}
             </label>
             <input type="file" accept="image/*" onChange={handleImage} className="text-sm" />
-            {uploading && <span className="text-xs text-[#6B6B6B] ml-2">上传中...</span>}
-            {scrapeError && !image && <p className="text-xs text-amber-600 mt-1">{scrapeError}</p>}
+            {uploading && <span className="text-xs text-[#6B6B6B] ml-2">{texts.inspFormUploading}</span>}
+            {scrapeError && !image && <p className="text-xs text-amber-700 mt-1">{scrapeError}</p>}
             {image && (
               <div className="mt-2 flex gap-2 items-start">
-                <img src={image} alt="preview" className="w-20 h-20 object-cover rounded-[16px]"
-                  onError={(e) => { e.currentTarget.style.display = "none"; setScrapeError("图片加载失败，可重新抓取或手动上传"); }} />
+                <img
+                  src={image}
+                  alt="preview"
+                  className="w-20 h-20 object-cover rounded-[14px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.5)]"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    setScrapeError(texts.inspFormImageError);
+                  }}
+                />
                 {url && (
                   <button type="button" onClick={handleScrapeClick} className="text-xs text-[#6B6B6B] hover:text-[#2B2B2B] underline">
-                    重新抓取
+                    {texts.inspFormRescrape}
                   </button>
                 )}
               </div>
             )}
           </div>
+
           <div>
-            <label className="block text-sm text-[#6B6B6B] mb-1">图解（PDF / 图片 / 网址）</label>
-            <div className="flex gap-2 mb-2">
-              <input
-                placeholder="或输入图解链接"
-                className="flex-1 px-3 py-1.5 rounded-[16px] border border-[rgba(47,95,158,0.2)] bg-white/80 text-sm focus:outline-none text-[#2B2B2B]"
-                value={pattern}
-                onChange={e => setPattern(e.target.value)}
-              />
-              <label className="px-3 py-1.5 text-sm rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.2)] hover:shadow-lg cursor-pointer transition whitespace-nowrap">
-                {patternUploading ? "上传中..." : "上传文件"}
+            <label className="block text-sm text-[#6B6B6B] mb-1">{texts.inspFormPatternLabel}</label>
+            <div className="flex flex-col min-[420px]:flex-row gap-2 mb-2">
+              <input placeholder={texts.inspFormPatternPlaceholder} className="felt-input flex-1 min-w-0 text-sm" value={pattern} onChange={(e) => setPattern(e.target.value)} />
+              <label className="felt-control text-sm cursor-pointer whitespace-nowrap">
+                {patternUploading ? texts.inspFormUploading : texts.inspFormUploadFile}
                 <input type="file" accept="image/*,application/pdf" onChange={handlePatternUpload} className="hidden" />
               </label>
             </div>
             {pattern && (
               <div className="mt-1">
                 {pattern.endsWith(".pdf") ? (
-                  <a href={pattern} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-[18px] bg-white/60 text-red-600 border border-[rgba(47,95,158,0.2)] hover:bg-white transition">
-                    📄 查看PDF图解
+                  <a href={pattern} target="_blank" rel="noopener noreferrer" className="felt-chip text-red-700">
+                    {texts.inspFormViewPdf}
                   </a>
                 ) : pattern.startsWith("http") ? (
-                  <a href={pattern} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-[18px] bg-white/60 text-blue-600 border border-[rgba(47,95,158,0.2)] hover:bg-white transition">
-                    🔗 打开图解链接
+                  <a href={pattern} target="_blank" rel="noopener noreferrer" className="felt-chip text-blue-700">
+                    {texts.inspFormViewPatternUrl}
                   </a>
                 ) : (
-                  <img src={pattern} alt="pattern" className="w-20 h-20 object-cover rounded-[16px]" />
+                  <img src={pattern} alt="pattern" className="w-20 h-20 object-cover rounded-[14px]" />
                 )}
               </div>
             )}
           </div>
-          <div className="flex gap-3 pt-2">
-            <button type="submit" className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
-              {initial ? "保存" : "添加"}
-            </button>
-            <button type="button" onClick={onClose} className="inline-block px-4 py-2 rounded-[18px] bg-white text-[#2B2B2B] border border-[rgba(47,95,158,0.25)] hover:shadow-lg transition">
-              取消
-            </button>
+
+          <div className="flex flex-col min-[420px]:flex-row gap-3 pt-2">
+            <button type="submit" className="felt-control min-[420px]:min-w-24">{initial ? texts.inspFormSave : texts.inspFormAdd}</button>
+            <button type="button" onClick={onClose} className="felt-control min-[420px]:min-w-24">{texts.inspFormCancel}</button>
           </div>
         </form>
       </div>

@@ -1,3 +1,4 @@
 @echo off
-cd /d F:\BrainChild
-start /B /WAIT F:\Node\npm.cmd run dev > F:\BrainChild\server.log 2>&1
+set SCRIPT_DIR=%~dp0
+cd /d "%SCRIPT_DIR%"
+start /B /WAIT "" F:\Node\npm.cmd run dev > "%SCRIPT_DIR%..\server.log" 2>&1
