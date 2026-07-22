@@ -46,7 +46,7 @@
   .card-yarn {
     background:
       linear-gradient(rgba(241, 229, 211, 0.76), rgba(241, 229, 211, 0.76)),
-      url("../../public/texture/knit-jersey-beige-1024.png") center / 360px repeat;
+      url("../../public/texture/bg-fabric-cream-1024.png") center / 520px repeat;
   }
   .card-insp {
     background:
@@ -95,7 +95,7 @@
   .card-yarn.felt-card {
     background:
       linear-gradient(rgba(250, 241, 226, 0.8), rgba(250, 241, 226, 0.8)),
-      url("../../public/texture/knit-jersey-beige-1024.png") center / 360px repeat;
+      url("../../public/texture/bg-fabric-cream-1024.png") center / 520px repeat;
   }
   .card-insp.felt-card {
     background:
