@@ -546,12 +546,36 @@ export default function Home() {
                 >
                   {b.type === "yarn" ? (
                     <>
-                      <clipPath id={`cy-${b.id}`}><circle cx={b.baseX} cy={b.baseY} r={b.r} /></clipPath>
                       <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="url(#feltPattern)" filter="url(#yarnShadow)" />
                       <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} fillOpacity={0.48} />
                       <circle cx={b.baseX - b.r * 0.22} cy={b.baseY - b.r * 0.24} r={b.r * 0.46} fill="rgba(255,255,255,0.22)" />
                       {b.image ? (
-                        <image key={`${b.id}-${b.image.slice(0, 48)}`} href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={hoveredId === b.id ? 0.72 : 0.18} onError={() => markImageFailed(b.image)} />
+                        <foreignObject
+                          key={`${b.id}-${b.image.slice(0, 48)}`}
+                          x={b.baseX - b.r}
+                          y={b.baseY - b.r}
+                          width={b.r * 2}
+                          height={b.r * 2}
+                          style={{ pointerEvents: "none" }}
+                        >
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              borderRadius: "9999px",
+                              overflow: "hidden",
+                              opacity: hoveredId === b.id ? 0.72 : 0.18,
+                            }}
+                          >
+                            <img
+                              src={b.image}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                              onError={() => markImageFailed(b.image)}
+                              style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          </div>
+                        </foreignObject>
                       ) : null}
                       <circle cx={b.baseX} cy={b.baseY} r={b.r - 2} fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth={2.2} strokeDasharray="2 5" strokeLinecap="round" />
                       <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="none" stroke="rgba(82,62,74,0.16)" strokeWidth={1.5} />
@@ -566,10 +590,32 @@ export default function Home() {
                       <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} fill="url(#feltPinkPattern)" filter="url(#feltShadow)" />
                       <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} fill="rgba(255,250,241,0.54)" />
                       {b.image ? (
-                        <>
-                          <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} /></clipPath>
-                          <image key={`${b.id}-${b.image.slice(0, 48)}`} href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={hoveredId === b.id ? 0.78 : 0.22} onError={() => markImageFailed(b.image)} />
-                        </>
+                        <foreignObject
+                          key={`${b.id}-${b.image.slice(0, 48)}`}
+                          x={b.baseX - b.r}
+                          y={b.baseY - b.r}
+                          width={b.r * 2}
+                          height={b.r * 2}
+                          style={{ pointerEvents: "none" }}
+                        >
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              borderRadius: Math.max(8, Math.round(r * 0.32)),
+                              overflow: "hidden",
+                              opacity: hoveredId === b.id ? 0.78 : 0.22,
+                            }}
+                          >
+                            <img
+                              src={b.image}
+                              alt=""
+                              referrerPolicy="no-referrer"
+                              onError={() => markImageFailed(b.image)}
+                              style={{ display: "block", width: "100%", height: "100%", objectFit: "cover" }}
+                            />
+                          </div>
+                        </foreignObject>
                       ) : null}
                       <rect x={b.baseX - b.r + 2} y={b.baseY - b.r + 2} width={b.r * 2 - 4} height={b.r * 2 - 4} rx={Math.max(8, Math.round(r * 0.28))} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={1.6} strokeDasharray="3 5" />
                       <rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} fill="none" stroke="rgba(88,64,98,0.18)" strokeWidth={1.5} />
