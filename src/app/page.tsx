@@ -194,6 +194,11 @@ export default function Home() {
     return false;
   };
 
+  const bubbleImage = (value: string | null | undefined): string | null => {
+    if (!value) return null;
+    return value.trim() ? value : null;
+  };
+
   const yarnItems = useMemo(() => linkedYarns.map((y) => ({
     id: `y-${y.id}`, type: "yarn" as const, label: y.name,
     color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarn-detail?id=${y.id}`,
@@ -204,7 +209,7 @@ export default function Home() {
     .filter(i => i.yarn_id !== null)
     .map((i) => ({
       id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
-      color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null,
+      color: "#f0abfc", image: bubbleImage(i.image),
       href: `/inspiration-detail?id=${i.id}`, hasYarn: true,
     })), [inspirations]);
 
@@ -212,7 +217,7 @@ export default function Home() {
     .filter(i => i.yarn_id === null)
     .map((i) => ({
       id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
-      color: "#f0abfc", image: i.image && i.image !== "" && !isLargeBase64(i.image) ? i.image : null,
+      color: "#f0abfc", image: bubbleImage(i.image),
       href: `/inspiration-detail?id=${i.id}`, hasYarn: false,
     })), [inspirations]);
 
@@ -521,7 +526,7 @@ export default function Home() {
                       {b.image ? (
                         <>
                           <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} /></clipPath>
-                          <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={hoveredId === b.id ? 0.78 : 0.22} />
+                          <image key={`${b.id}-${b.image.slice(0, 48)}`} href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={hoveredId === b.id ? 0.78 : 0.22} />
                         </>
                       ) : null}
                       <rect x={b.baseX - b.r + 2} y={b.baseY - b.r + 2} width={b.r * 2 - 4} height={b.r * 2 - 4} rx={Math.max(8, Math.round(r * 0.28))} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={1.6} strokeDasharray="3 5" />

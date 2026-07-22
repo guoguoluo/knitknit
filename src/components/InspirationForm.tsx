@@ -36,16 +36,20 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const [patternUploading, setPatternUploading] = useState(false);
   const [scraping, setScraping] = useState(false);
   const [scrapeError, setScrapeError] = useState("");
+  const [imageLoadFailed, setImageLoadFailed] = useState(false);
+  const [pasteMessage, setPasteMessage] = useState("");
   const abortRef = useRef<AbortController | null>(null);
   const lastScrapedRef = useRef(initial?.url || "");
 
-  const setImageFromFile = (file: File) => {
+  const setImageFromFile = (file: File, source: "paste" | "upload" = "upload") => {
     if (!file.type.startsWith("image/")) return;
     setUploading(true);
     setScrapeError("");
+    setImageLoadFailed(false);
     const reader = new FileReader();
     reader.onload = () => {
       setImage(reader.result as string);
+      setPasteMessage(source === "paste" ? texts.inspFormPasteSuccess : "");
       setUploading(false);
     };
     reader.onerror = () => setUploading(false);
@@ -55,15 +59,21 @@ export default function InspirationForm({ onClose, initial }: Props) {
   const handleImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFromFile(file);
+    setImageFromFile(file, "upload");
+  };
+
+  const pasteImageFromItems = (items: DataTransferItemList | undefined | null) => {
+    if (!items) return false;
+    const item = Array.from(items).find((entry) => entry.type.startsWith("image/"));
+    const file = item?.getAsFile();
+    if (!file) return false;
+    setImageFromFile(file, "paste");
+    return true;
   };
 
   const handlePaste = (e: React.ClipboardEvent<HTMLDivElement>) => {
-    const item = Array.from(e.clipboardData.items).find((entry) => entry.type.startsWith("image/"));
-    const file = item?.getAsFile();
-    if (!file) return;
+    if (!pasteImageFromItems(e.clipboardData.items)) return;
     e.preventDefault();
-    setImageFromFile(file);
   };
 
   const handlePatternUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -88,7 +98,11 @@ export default function InspirationForm({ onClose, initial }: Props) {
       const data = await scrapeUrl(value, controller.signal);
       if (data.title) setTitle(data.title);
       if (data.platform) setPlatform(data.platform);
-      if (data.images?.length > 0) setImage(data.images[0]);
+      if (data.images?.length > 0) {
+        setImageLoadFailed(false);
+        setPasteMessage("");
+        setImage(data.images[0]);
+      }
       else setScrapeError(texts.inspFormScrapeFail);
     } catch {
       if (!controller.signal.aborted) setScrapeError(texts.inspFormScrapeError);
@@ -121,6 +135,16 @@ export default function InspirationForm({ onClose, initial }: Props) {
     }, 650);
     return () => window.clearTimeout(timeout);
   }, [initial, url]);
+
+  useEffect(() => {
+    const onWindowPaste = (event: ClipboardEvent) => {
+      if (event.defaultPrevented) return;
+      if (!pasteImageFromItems(event.clipboardData?.items)) return;
+      event.preventDefault();
+    };
+    window.addEventListener("paste", onWindowPaste);
+    return () => window.removeEventListener("paste", onWindowPaste);
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -186,19 +210,23 @@ export default function InspirationForm({ onClose, initial }: Props) {
               )}
             </label>
             <input type="file" accept="image/*" onChange={handleImage} className="text-sm" />
+            <p className="text-xs text-[#7B6B5B] mt-1">{texts.inspFormPasteHint}</p>
             {uploading && <span className="text-xs text-[#6B6B6B] ml-2">{texts.inspFormUploading}</span>}
-            {scrapeError && !image && <p className="text-xs text-amber-700 mt-1">{scrapeError}</p>}
-            {image && (
+            {pasteMessage && <p className="text-xs text-green-700 mt-1">{pasteMessage}</p>}
+            {scrapeError && (!image || imageLoadFailed) && <p className="text-xs text-amber-700 mt-1">{scrapeError}</p>}
+            {image && !imageLoadFailed && (
               <div className="mt-2 flex gap-2 items-start">
                 <img
+                  key={image}
                   src={image}
                   alt="preview"
                   className="w-20 h-20 object-cover rounded-[14px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.5)]"
                   referrerPolicy="no-referrer"
                   onError={(e) => {
-                    e.currentTarget.style.display = "none";
+                    setImageLoadFailed(true);
                     setScrapeError(texts.inspFormImageError);
                   }}
+                  onLoad={() => setImageLoadFailed(false)}
                 />
                 {url && (
                   <button type="button" onClick={handleScrapeClick} className="text-xs text-[#6B6B6B] hover:text-[#2B2B2B] underline">
