@@ -119,6 +119,8 @@ export default function Home() {
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
   const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
+  const [readyImages, setReadyImages] = useState<Set<string>>(() => new Set());
+  const pendingImages = useRef<Set<string>>(new Set());
   const panStart = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const pinchRef = useRef<{ dist0: number; scale0: number } | null>(null);
   const animRef = useRef<number>(0);
@@ -189,18 +191,12 @@ export default function Home() {
     return inspirations.filter((i) => i.yarn_id !== null).map((i) => ({ yarnId: i.yarn_id!, inspId: i.id }));
   }, [inspirations]);
 
-  const isLargeBase64 = (s: string | null | undefined): boolean => {
-    if (!s) return true;
-    if (s.startsWith("data:") && s.length > 5000) return true;
-    return false;
-  };
-
   const bubbleImage = useCallback((value: string | null | undefined): string | null => {
     if (!value) return null;
     const trimmed = value.trim();
-    if (!trimmed || failedImages.has(trimmed)) return null;
+    if (!trimmed || failedImages.has(trimmed) || !readyImages.has(trimmed)) return null;
     return trimmed;
-  }, [failedImages]);
+  }, [failedImages, readyImages]);
 
   const markImageFailed = useCallback((value: string | null) => {
     if (!value) return;
@@ -210,13 +206,46 @@ export default function Home() {
       next.add(value);
       return next;
     });
+    setReadyImages((prev) => {
+      if (!prev.has(value)) return prev;
+      const next = new Set(prev);
+      next.delete(value);
+      return next;
+    });
   }, []);
+
+  const queueImageValidation = useCallback((value: string | null | undefined) => {
+    const src = value?.trim();
+    if (!src || failedImages.has(src) || readyImages.has(src) || pendingImages.current.has(src)) return;
+    pendingImages.current.add(src);
+    const img = new Image();
+    img.referrerPolicy = "no-referrer";
+    img.onload = () => {
+      pendingImages.current.delete(src);
+      setReadyImages((prev) => {
+        if (prev.has(src)) return prev;
+        const next = new Set(prev);
+        next.add(src);
+        return next;
+      });
+    };
+    img.onerror = () => {
+      pendingImages.current.delete(src);
+      markImageFailed(src);
+    };
+    img.src = src;
+  }, [failedImages, markImageFailed, readyImages]);
+
+  useEffect(() => {
+    linkedYarns.forEach((y) => queueImageValidation(y.photo));
+    inspirations.forEach((i) => queueImageValidation(i.image));
+  }, [inspirations, linkedYarns, queueImageValidation]);
 
   const yarnItems = useMemo(() => linkedYarns.map((y) => ({
     id: `y-${y.id}`, type: "yarn" as const, label: y.name,
-    color: y.color || "#e5e7eb", image: isLargeBase64(y.photo) ? null : y.photo, href: `/yarn-detail?id=${y.id}`,
+    color: y.color || "#e5e7eb", image: bubbleImage(y.photo), href: `/yarn-detail?id=${y.id}`,
     hasYarn: true,
-  })), [linkedYarns]);
+  })), [linkedYarns, bubbleImage]);
 
   const linkedInspItems = useMemo(() => inspirations
     .filter(i => i.yarn_id !== null)
