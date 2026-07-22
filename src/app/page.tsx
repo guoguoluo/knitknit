@@ -118,6 +118,7 @@ export default function Home() {
   const navigated = useRef(false);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
+  const [failedImages, setFailedImages] = useState<Set<string>>(() => new Set());
   const panStart = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
   const pinchRef = useRef<{ dist0: number; scale0: number } | null>(null);
   const animRef = useRef<number>(0);
@@ -194,10 +195,22 @@ export default function Home() {
     return false;
   };
 
-  const bubbleImage = (value: string | null | undefined): string | null => {
+  const bubbleImage = useCallback((value: string | null | undefined): string | null => {
     if (!value) return null;
-    return value.trim() ? value : null;
-  };
+    const trimmed = value.trim();
+    if (!trimmed || failedImages.has(trimmed)) return null;
+    return trimmed;
+  }, [failedImages]);
+
+  const markImageFailed = useCallback((value: string | null) => {
+    if (!value) return;
+    setFailedImages((prev) => {
+      if (prev.has(value)) return prev;
+      const next = new Set(prev);
+      next.add(value);
+      return next;
+    });
+  }, []);
 
   const yarnItems = useMemo(() => linkedYarns.map((y) => ({
     id: `y-${y.id}`, type: "yarn" as const, label: y.name,
@@ -211,7 +224,7 @@ export default function Home() {
       id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
       color: "#f0abfc", image: bubbleImage(i.image),
       href: `/inspiration-detail?id=${i.id}`, hasYarn: true,
-    })), [inspirations]);
+  })), [inspirations, bubbleImage]);
 
   const unlinkedInspItems = useMemo(() => inspirations
     .filter(i => i.yarn_id === null)
@@ -219,7 +232,7 @@ export default function Home() {
       id: `i-${i.id}`, type: "inspiration" as const, label: i.title,
       color: "#f0abfc", image: bubbleImage(i.image),
       href: `/inspiration-detail?id=${i.id}`, hasYarn: false,
-    })), [inspirations]);
+  })), [inspirations, bubbleImage]);
 
   const totalItems = yarnItems.length + linkedInspItems.length + unlinkedInspItems.length;
 
@@ -509,7 +522,7 @@ export default function Home() {
                       <circle cx={b.baseX} cy={b.baseY} r={b.r} fill={b.color || "#c4956a"} fillOpacity={0.48} />
                       <circle cx={b.baseX - b.r * 0.22} cy={b.baseY - b.r * 0.24} r={b.r * 0.46} fill="rgba(255,255,255,0.22)" />
                       {b.image ? (
-                        <image href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={hoveredId === b.id ? 0.72 : 0.18} />
+                        <image key={`${b.id}-${b.image.slice(0, 48)}`} href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#cy-${b.id})`} opacity={hoveredId === b.id ? 0.72 : 0.18} onError={() => markImageFailed(b.image)} />
                       ) : null}
                       <circle cx={b.baseX} cy={b.baseY} r={b.r - 2} fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth={2.2} strokeDasharray="2 5" strokeLinecap="round" />
                       <circle cx={b.baseX} cy={b.baseY} r={b.r} fill="none" stroke="rgba(82,62,74,0.16)" strokeWidth={1.5} />
@@ -526,7 +539,7 @@ export default function Home() {
                       {b.image ? (
                         <>
                           <clipPath id={`ci-${b.id}`}><rect x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} rx={Math.max(8, Math.round(r * 0.32))} /></clipPath>
-                          <image key={`${b.id}-${b.image.slice(0, 48)}`} href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={hoveredId === b.id ? 0.78 : 0.22} />
+                          <image key={`${b.id}-${b.image.slice(0, 48)}`} href={b.image} x={b.baseX - b.r} y={b.baseY - b.r} width={b.r * 2} height={b.r * 2} preserveAspectRatio="xMidYMid slice" clipPath={`url(#ci-${b.id})`} opacity={hoveredId === b.id ? 0.78 : 0.22} onError={() => markImageFailed(b.image)} />
                         </>
                       ) : null}
                       <rect x={b.baseX - b.r + 2} y={b.baseY - b.r + 2} width={b.r * 2 - 4} height={b.r * 2 - 4} rx={Math.max(8, Math.round(r * 0.28))} fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth={1.6} strokeDasharray="3 5" />
@@ -551,7 +564,7 @@ export default function Home() {
             top: Math.max(mousePos.y - 50, 8),
           }}>
             {hoveredBubble.image && (
-              <img src={hoveredBubble.image} alt={hoveredBubble.label} className="w-full h-20 object-cover rounded-lg mb-1.5" referrerPolicy="no-referrer" />
+              <img src={hoveredBubble.image} alt={hoveredBubble.label} className="w-full h-20 object-cover rounded-lg mb-1.5" referrerPolicy="no-referrer" onError={() => markImageFailed(hoveredBubble.image)} />
             )}
             <div className="flex items-center gap-1.5">
               {hoveredBubble.type === "yarn" ? (

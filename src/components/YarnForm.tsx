@@ -281,6 +281,9 @@ export default function YarnForm({ onClose, initial }: Props) {
   const [unit, setUnit] = useState(initial?.unit || "g");
   const [notes, setNotes] = useState(initial?.notes || "");
   const [photo, setPhoto] = useState(initial?.photo || "");
+  const [originalPhoto, setOriginalPhoto] = useState("");
+  const [processedPhoto, setProcessedPhoto] = useState(initial?.photo || "");
+  const [usingOriginalPhoto, setUsingOriginalPhoto] = useState(false);
   const [tagsStr, setTagsStr] = useState(initial?.tags.join(", ") || "");
   const [uploading, setUploading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
@@ -290,9 +293,12 @@ export default function YarnForm({ onClose, initial }: Props) {
   const processImageDataUrl = useCallback(async (dataUrl: string) => {
     setUploading(true);
     setAnalyzing(true);
+    setOriginalPhoto(dataUrl);
+    setUsingOriginalPhoto(false);
     try {
       const sourceImg = await loadImage(dataUrl);
       const cleaned = removeBackground(sourceImg);
+      setProcessedPhoto(cleaned);
       setPhoto(cleaned);
       const cleanedImg = await loadImage(cleaned);
       const [dominantColor] = extractDominantColors(cleanedImg);
@@ -308,6 +314,18 @@ export default function YarnForm({ onClose, initial }: Props) {
       setAnalyzing(false);
     }
   }, [brand, material, name]);
+
+  const useOriginalPhoto = () => {
+    if (!originalPhoto) return;
+    setUsingOriginalPhoto(true);
+    setPhoto(originalPhoto);
+  };
+
+  const useProcessedPhoto = () => {
+    if (!processedPhoto) return;
+    setUsingOriginalPhoto(false);
+    setPhoto(processedPhoto);
+  };
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -454,6 +472,16 @@ export default function YarnForm({ onClose, initial }: Props) {
             </div>
             <input ref={fileRef} type="file" accept="image/*" onChange={handlePhoto} className="hidden" style={{ display: "none" }} />
             {uploading && <span className="text-xs text-[#6B6B6B] mt-1 inline-block">{texts.yarnFormProcessing}</span>}
+            {originalPhoto && processedPhoto && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" onClick={useOriginalPhoto} className={`felt-chip text-xs ${usingOriginalPhoto ? "ring-2 ring-[rgba(80,62,76,0.22)]" : ""}`}>
+                  {texts.yarnFormUseOriginalPhoto}
+                </button>
+                <button type="button" onClick={useProcessedPhoto} className={`felt-chip text-xs ${!usingOriginalPhoto ? "ring-2 ring-[rgba(80,62,76,0.22)]" : ""}`}>
+                  {texts.yarnFormUseProcessedPhoto}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col min-[420px]:flex-row gap-3 pt-2">
